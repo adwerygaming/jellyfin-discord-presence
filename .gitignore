@@ -137,3 +137,5 @@ dist
 .pnp.*
 
 package-lock.json
+# This line was added by CommitAI.
+.commitai

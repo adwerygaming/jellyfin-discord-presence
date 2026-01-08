@@ -24,20 +24,20 @@
     "node": ">=21"
   },
   "devDependencies": {
-    "@types/node": "^24.2.0",
-    "concurrently": "^9.2.0",
-    "nodemon": "^3.1.10",
-    "tsup": "^8.5.0",
-    "tsx": "^4.20.4",
-    "typescript": "^5.9.2"
+    "@types/node": "^25.0.3",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.11",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@jellyfin/sdk": "^0.11.0",
-    "@types/discord-rpc": "^4.0.9",
+    "@jellyfin/sdk": "^0.13.0",
+    "@types/discord-rpc": "^4.0.10",
     "@types/node": "^24.5.0",
-    "axios": "^1.10.0",
+    "axios": "^1.13.2",
     "discord-rpc": "^4.0.1",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.2.3",
     "gradient-string": "^3.0.0"
   }
 }
