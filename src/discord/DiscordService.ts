@@ -98,8 +98,8 @@ export const DiscordService = {
             const type = np?.Type
 
             // Handle type "Episode" & "Movie"
-            if (type == "Episode" || type == "Movie") {
-                if (seasonName.includes("Season")) {
+            if (type == "Episode") {
+                if (seasonName?.includes("Season")) {
                     // TV Show
                     const seasonNumber = np?.ParentIndexNumber
                     const episodeNumber = np?.IndexNumber
@@ -109,13 +109,19 @@ export const DiscordService = {
                         obj.state = `🍿 ${SeriesName}`
                     }
                 } else {
-                    // Movie or episode without season
+                    // Episode without season
                     obj.details = `${name}`
 
                     if (seasonName && seasonName.length > 0) {
                         obj.state = `${SeriesName}`
+                    } else {
+                        obj.state = undefined
                     }
                 }
+
+            } else if (type == "Movie") {
+                obj.details = `Watching a movie`
+                obj.state = `${name}`
 
             // Handle type "Audio"
             } else if (type == "Audio") {
