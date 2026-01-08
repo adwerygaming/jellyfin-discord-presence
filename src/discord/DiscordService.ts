@@ -1,73 +1,149 @@
 import { Presence } from "discord-rpc"
 import { JellyfinService } from "../jellyfin/JellyfinService.js"
-import DiscordRPC from "./Client.js"
 import Tags from "../utils/Tags.js"
+import DiscordRPC from "./Client.js"
+
+const DISCORD_MAX_STRING_LENGTH = 128
+
+// IDLE SYSTEM
+const allowIdle = true      // toggle idle system
+const idleThreshold = 2     // number of updates before considering idle
+let idleStateCounter = 0
+let isIdle = false
 
 export const DiscordService = {
     UpdateRPC: async () => {
         const mySession = await JellyfinService.GetMySession()
 
+        // TODO
+        /**
+         * 1. Remove timestamp when paused [doesnt work appearently]
+         * 2. Format [done]
+         *      Movie/TV Shows: 
+         *          Details: S{Season}:E{Episode} - {Episode Title}
+         *          State: {Series Title}
+         *      Music:
+         *          Details: {Track Title}
+         *          State: {Artist}
+         * 4. fix the get type thingy lol [done]
+         */
+
         if (mySession) {
             const np = mySession?.NowPlayingItem
+            const ps = mySession?.PlayState
 
-            const isPaused = mySession?.PlayState.IsPaused
+            const isPaused = ps?.IsPaused
 
-            const username = mySession.UserName // Your jellyfin username
-            const deviceName = mySession.DeviceName // example: MASDEPAN-LAPTOP (Chrome)
-            // const clientName = mySession.Client // likely 'Jellyfin Web' or 'Jellyfin Android'
+            // const username = mySession.UserName // Your jellyfin username
+            // const deviceName = mySession.DeviceName // example: MASDEPAN-LAPTOP (Chrome)
+            const clientName = mySession.Client // likely 'Jellyfin Web' or 'Jellyfin Android'
 
             const obj: Presence = {
-                startTimestamp: Date.now(),
+                startTimestamp: undefined,
+                endTimestamp: undefined,
                 largeImageKey: "jellyfin_logo",
-                largeImageText: `Jellyfin on ${deviceName} `,
+                largeImageText: `${clientName}`,
                 details: undefined,
                 state: undefined
             };
 
-            if (!np) {
+            // console.log(`[${Tags.Debug}] NowPlaying: ${np ? true : false}`)
+            // console.log(`[${Tags.Debug}] isPaused: ${isPaused ? true : false}`)
+            // console.log(`[${Tags.Debug}] isIdle: ${isIdle}`)
+            // console.log(`[${Tags.Debug}] idle: ${idleStateCounter}/${idleThreshold}`)
+
+            // Idle system on no playback or paused
+            if (!np || isPaused) {
                 obj.details = "On Homepage"
-                obj.state = "Scrolling through videos."
-            } else {
-                // show playing
-                const startTime = Date.now() - Math.floor(mySession?.PlayState?.PositionTicks / 10000);
-                
-                // const mediaType: NowPlayingItemType = np?.Type
-                const seriesName = np?.SeriesName
-                const episodeName = np?.Name
-                const seasonName = np?.SeasonName
-                const episodeNumber = np?.IndexNumber ?? 0
+                obj.state = "Scrolling through library."
 
-                // idk bout this one lol
-                const shortSeasonName = "S" + seasonName?.split(" ")[1]
-
-                const shortSeaNEpsName = `${shortSeasonName}:E${episodeNumber}`
-                if (isNaN(Number(seasonName?.split(" ")[1]))) {
-                    // not valid series
-                    obj.details = `${seriesName}`
-                    obj.state = `${seasonName} ${episodeName}`
-                } else {
-                    // valid series
-                    obj.details = `${seriesName}`
-                    obj.state = `${shortSeaNEpsName} - ${episodeName}`
+                if (allowIdle && !isIdle) {
+                    if (idleStateCounter >= idleThreshold) {
+                        isIdle = true
+                    } else {
+                        idleStateCounter++
+                    }
                 }
-
-                obj.smallImageKey = isPaused == true ? "paused" : "playing"
-                obj.smallImageText = `${isPaused == true ? "Paused" : `Playing | ${username}`}`
-                obj.startTimestamp = isPaused == true ? undefined : startTime
             }
 
-            await DiscordRPC.setActivity(obj)
+            if (isIdle && (!np || isPaused)) {
+                console.log(`[${Tags.Debug}] Idle.`)
+                idleStateCounter = 0
+                await DiscordRPC.clearActivity()
+                return
+            }
 
-            console.log(`[${Tags.Discord}] ==================================================================`)
-            console.log(`[${Tags.Discord}] Active Session : ${username}`)
-            console.log(`[${Tags.Discord}] Device         : ${deviceName}`)
-            console.log(`[${Tags.Discord}] Video State    : ${isPaused ? "Paused" : "Playing"}`)
-            console.log(``)
-            console.log(`[${Tags.Discord}] Details        : ${obj.details}`)
-            console.log(`[${Tags.Discord}] State          : ${obj.state}`)
-            console.log(`[${Tags.Discord}] Large Img Text : ${obj.largeImageText}`)
-            console.log(`[${Tags.Discord}] ==================================================================`)
-            console.log(``)
+            isIdle = false
+
+            // console.log(np)
+            const startTime = Date.now() - Math.floor(mySession?.PlayState?.PositionTicks / 10000);
+            // const runtimeTicks = np?.RunTimeTicks ?? 0
+            // const endTime = startTime + Math.floor(runtimeTicks / 10000);
+
+            // console.log(`[${Tags.Debug}] startTime: ${new Date(startTime).toTimeString()}`)
+            // console.log(`[${Tags.Debug}] endTime: ${new Date(endTime).toTimeString()}`)
+
+            // tv series:
+            /**
+             *  Type: 'Episode',
+             *  SeasonName: 'Season 1',
+             *  Name: 'I Knew at First Glance That It Was No Ordinary Fluffball',
+             *  IndexNumber: 1,
+             *  format: S1:E1 - {Name}
+             */
+
+            const name = np?.Name
+            const seasonName = np?.SeasonName
+            const SeriesName = np?.SeriesName
+            const type = np?.Type
+
+            // Handle type "Episode" & "Movie"
+            if (type == "Episode" || type == "Movie") {
+                if (seasonName.includes("Season")) {
+                    // TV Show
+                    const seasonNumber = np?.ParentIndexNumber
+                    const episodeNumber = np?.IndexNumber
+                    obj.details = `🎬 S${seasonNumber}:E${episodeNumber} - ${name}`
+
+                    if (seasonName && seasonName.length > 0) {
+                        obj.state = `🍿 ${SeriesName}`
+                    }
+                } else {
+                    // Movie or episode without season
+                    obj.details = `${name}`
+
+                    if (seasonName && seasonName.length > 0) {
+                        obj.state = `${SeriesName}`
+                    }
+                }
+
+            // Handle type "Audio"
+            } else if (type == "Audio") {
+                const artist = np?.Artists?.length > 0 ? np?.Artists?.join(", ") : "Unknown Artist"
+
+                obj.details = `🎵 ${name}`
+                obj.state = `by ${artist}`
+
+            // Fallback for other types
+            } else {
+                if (name) {
+                    obj.details = `${name}`
+                }
+            }
+
+            obj.smallImageKey = isPaused == true ? "paused" : "playing"
+            obj.smallImageText = `${isPaused == true ? "Paused" : `Playing`}`
+            obj.startTimestamp = isPaused == true ? undefined : startTime
+            // obj.endTimestamp = isPaused == true ? undefined : endTime // doesnt work like expected. expecting a progress bar but got countdown instead
+
+            console.log(obj)
+
+            // cut discord limits
+            obj.details = obj.details?.substring(0, DISCORD_MAX_STRING_LENGTH)
+            obj.state = obj.state?.substring(0, DISCORD_MAX_STRING_LENGTH)
+
+            await DiscordRPC.setActivity(obj)
+            console.log(`[${Tags.Discord}] Presence Updated.`)
         }
     }
 }
