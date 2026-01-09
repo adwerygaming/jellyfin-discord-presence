@@ -1,13 +1,12 @@
 <div align="center">
     <img src="/aseets//screenshots/banner.png">
-    <h1>Jellyfin Discord RPC</h1>
+    <h1>Simple Jellyfin Discord RPC</h1>
     <p>A Node.js application that displays your current Jellyfin viewing activity as a Discord Rich Presence status. Updates your Discord status to show what you're watching, including details like series name, episode, and playback state (playing/paused).</p>
 </div>
 
 ## Features
 ![Image 0](/aseets/screenshots/img0.png)
 
-*   **Real-time Status:** Displays the currently playing movie or TV show from Jellyfin on your Discord profile.
 *   **Detailed Information:** Shows series name, season/episode number, and episode title for TV shows.
 *   **Playback State:** Indicates whether the media is `Playing` or `Paused` with a corresponding icon.
 *   **Idle Status:** Displays a generic "On Homepage" status when you are not actively watching anything on Jellyfin.
@@ -15,9 +14,8 @@
 
 ## Requirements
 
-*   **Runtime:** Node.js `>=21`
-*   **Tools:** Discord Desktop client 
-*   **Account:** A Jellyfin account.
+*   Node.js `>=21`
+*   Discord Desktop client
 
 ## Quick Install & Dev
 
@@ -71,15 +69,7 @@ The project includes scripts for development, production execution, and building
     ```sh
     npm run build
     ```
-
-## Troubleshooting
-
-*   **`DISCORD_CLIENT_ID is missing...`**: You have not set the `DISCORD_CLIENT_ID` in your `.env` file.
-*   **`JELLYFIN_TARGET_USERID is empty!...`**: You have not set the `JELLYFIN_TARGET_USERID` in your `.env` file.
-*   **`Failed to connect to Discord PRC.`**: Ensure your Discord desktop client is running and you are logged in. This script cannot run in a headless environment without a running Discord instance.
-*   **`Failed to get sessions info: 401. Please update your jellyfin access token.`**: The `JELLYFIN_ACCESS_TOKEN` in your `.env` file is incorrect, expired, or has been revoked (e.g., by logging out of your Jellyfin session). Follow the instructions in `.env.example` to generate a new one.
-*   **`Couldn't find any active session. Try playing a video.`**: The script is running correctly but cannot find an active playback session for the specified `JELLYFIN_TARGET_USERID`. Start playing something on Jellyfin.
-
+    
 ## License
 
 This project is licensed under the **ISC License**.

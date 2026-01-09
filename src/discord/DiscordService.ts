@@ -1,5 +1,5 @@
 import { Presence } from "discord-rpc"
-import { JellyfinService } from "../jellyfin/JellyfinService.js"
+import JellyfinService from "../jellyfin/JellyfinService.js"
 import Tags from "../utils/Tags.js"
 import DiscordRPC from "./Client.js"
 
@@ -15,7 +15,7 @@ export const DiscordService = {
     UpdateRPC: async () => {
         const mySession = await JellyfinService.GetMySession()
 
-        // TODO
+        //! TODO
         /**
          * 1. Remove timestamp when paused [doesnt work appearently]
          * 2. Format [done]
