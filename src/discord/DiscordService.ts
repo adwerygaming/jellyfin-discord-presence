@@ -16,28 +16,11 @@ export const DiscordService = {
     UpdateRPC: async () => {
         const mySession = await JellyfinService.User.GetMySession()
 
-        //! TODO
-        /**
-         * 1. Remove timestamp when paused [doesnt work appearently]
-         * 2. Format [done]
-         *      Movie/TV Shows: 
-         *          Details: S{Season}:E{Episode} - {Episode Title}
-         *          State: {Series Title}
-         *      Music:
-         *          Details: {Track Title}
-         *          State: {Artist}
-         * 4. fix the get type thingy lol [done]
-         */
-
         if (mySession) { 
             const username = mySession?.UserName ?? "User"
             const np = mySession?.NowPlayingItem
             const ps = mySession?.PlayState
-
             const isPaused = ps?.IsPaused
-
-            // const username = mySession.UserName // Your jellyfin username
-            // const deviceName = mySession.DeviceName // example: MASDEPAN-LAPTOP (Chrome)
             const clientName = mySession.Client // likely 'Jellyfin Web' or 'Jellyfin Android'
 
             const obj: Presence = {
@@ -48,11 +31,6 @@ export const DiscordService = {
                 details: undefined,
                 state: undefined
             };
-
-            // console.log(`[${Tags.Debug}] NowPlaying: ${np ? true : false}`)
-            // console.log(`[${Tags.Debug}] isPaused: ${isPaused ? true : false}`)
-            // console.log(`[${Tags.Debug}] isIdle: ${isIdle}`)
-            // console.log(`[${Tags.Debug}] idle: ${idleStateCounter}/${idleThreshold}`)
 
             // Idle system on no playback or paused
             if (!np || isPaused) {
@@ -87,23 +65,8 @@ export const DiscordService = {
                 console.log(`[${Tags.Jellyfin}] ${username} is back online!`)
                 wasTellingIdle = false
             }
-            
-            // console.log(np)
+
             const startTime = Date.now() - Math.floor(mySession?.PlayState?.PositionTicks / 10000);
-            // const runtimeTicks = np?.RunTimeTicks ?? 0
-            // const endTime = startTime + Math.floor(runtimeTicks / 10000);
-
-            // console.log(`[${Tags.Debug}] startTime: ${new Date(startTime).toTimeString()}`)
-            // console.log(`[${Tags.Debug}] endTime: ${new Date(endTime).toTimeString()}`)
-
-            // tv series:
-            /**
-             *  Type: 'Episode',
-             *  SeasonName: 'Season 1',
-             *  Name: 'I Knew at First Glance That It Was No Ordinary Fluffball',
-             *  IndexNumber: 1,
-             *  format: S1:E1 - {Name}
-             */
 
             const name = np?.Name
             const seasonName = np?.SeasonName
@@ -154,9 +117,6 @@ export const DiscordService = {
             obj.smallImageKey = isPaused == true ? "paused" : "playing"
             obj.smallImageText = `${isPaused == true ? "Paused" : `Playing`}`
             obj.startTimestamp = isPaused == true ? undefined : startTime
-            // obj.endTimestamp = isPaused == true ? undefined : endTime // doesnt work like expected. expecting a progress bar but got countdown instead
-
-            // console.log(obj)
 
             // cut discord limits
             obj.details = obj.details?.substring(0, DISCORD_MAX_STRING_LENGTH)
