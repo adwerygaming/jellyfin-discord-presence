@@ -1,4 +1,0 @@
-rpc format
-
-[L1]
-[L2]
