@@ -1,4 +1,4 @@
-import { NowPlayingItemType } from "./Types.js"
+import { NowPlayingItemType } from "../../Types.js"
 
 export type SessionsInfo = SessionInfo[]
 

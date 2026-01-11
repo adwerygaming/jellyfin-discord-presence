@@ -10,10 +10,11 @@ const allowIdle = true      // toggle idle system
 const idleThreshold = 2     // number of updates before considering idle
 let idleStateCounter = 0
 let isIdle = false
+let wasTellingIdle = false
 
 export const DiscordService = {
     UpdateRPC: async () => {
-        const mySession = await JellyfinService.GetMySession()
+        const mySession = await JellyfinService.User.GetMySession()
 
         //! TODO
         /**
@@ -28,7 +29,8 @@ export const DiscordService = {
          * 4. fix the get type thingy lol [done]
          */
 
-        if (mySession) {
+        if (mySession) { 
+            const username = mySession?.UserName ?? "User"
             const np = mySession?.NowPlayingItem
             const ps = mySession?.PlayState
 
@@ -67,14 +69,25 @@ export const DiscordService = {
             }
 
             if (isIdle && (!np || isPaused)) {
-                console.log(`[${Tags.Debug}] Idle.`)
+                // console.log(`[${Tags.Debug}] Idle.`)
+                if (!wasTellingIdle) {
+                    console.log(`[${Tags.Jellyfin}] ${username} is now idle.`)
+                    wasTellingIdle = true
+                }
+
                 idleStateCounter = 0
                 await DiscordRPC.clearActivity()
                 return
             }
 
             isIdle = false
-
+            
+            // Trigger back when user is no longer idle
+            if (!isIdle && wasTellingIdle) {
+                console.log(`[${Tags.Jellyfin}] ${username} is back online!`)
+                wasTellingIdle = false
+            }
+            
             // console.log(np)
             const startTime = Date.now() - Math.floor(mySession?.PlayState?.PositionTicks / 10000);
             // const runtimeTicks = np?.RunTimeTicks ?? 0
@@ -97,7 +110,7 @@ export const DiscordService = {
             const SeriesName = np?.SeriesName
             const type = np?.Type
 
-            // Handle type "Episode" & "Movie"
+            // Handle type "Episode"
             if (type == "Episode") {
                 if (seasonName?.includes("Season")) {
                     // TV Show
@@ -119,6 +132,7 @@ export const DiscordService = {
                     }
                 }
 
+            // Handle type "Movie"
             } else if (type == "Movie") {
                 obj.details = `Watching a movie`
                 obj.state = `${name}`
@@ -142,7 +156,7 @@ export const DiscordService = {
             obj.startTimestamp = isPaused == true ? undefined : startTime
             // obj.endTimestamp = isPaused == true ? undefined : endTime // doesnt work like expected. expecting a progress bar but got countdown instead
 
-            console.log(obj)
+            // console.log(obj)
 
             // cut discord limits
             obj.details = obj.details?.substring(0, DISCORD_MAX_STRING_LENGTH)
