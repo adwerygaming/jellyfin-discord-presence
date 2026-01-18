@@ -121,6 +121,7 @@ const JellyfinService = {
 
             return mySession
         },
+        
         /**
          * Get my now playing, using userID from JELLYFIN_TARGET_USERID in env variable file
          * @returns NowPlayingItem | null - my now playing item or null if not found
@@ -137,6 +138,7 @@ const JellyfinService = {
 
             return NowPlayingItem
         },
+
         /**
          * Get all users sessions from backend view
          * @returns GetUsersSessionsResult - object containing count and array of users' session info
