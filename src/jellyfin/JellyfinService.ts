@@ -11,7 +11,10 @@ interface GetUsersSessionsResult {
 
 const JellyfinService = {
     Server: {
-        // Get server info (backend, not the public one)
+        /**
+         * Get server info (from backend (server), not the public one)
+         * @returns SystemInfo | null - system info object or null on failure
+         */
         async GetServerInfo(): Promise<SystemInfo | null> {
             const response = await JellyfinAPI.get<SystemInfo>("/System/Info", {
                 validateStatus: () => true
@@ -29,7 +32,12 @@ const JellyfinService = {
 
             return response.data
         },
-        async GetAllUsers() {
+
+        /**
+         * Get all users from backend view (all users)
+         * @returns Users | null - users object or null on failure
+         */
+        async GetAllUsers(): Promise<Users | null> {
             const response = await JellyfinAPI.get<Users>("/Users", {
                 validateStatus: () => true
             });
@@ -48,7 +56,10 @@ const JellyfinService = {
         }
     },
     Session: {
-        // Get all active sessions
+        /**
+         * Get all active sessions from backend view (sessions across all users). Note that 1 user can have multiple sessions.
+         * @returns SessionsInfo | null - sessions info object or null on failure
+         */
         async GetSessions(): Promise<SessionsInfo | null> {
             const response = await JellyfinAPI.get<SessionsInfo>("/Sessions", {
                 validateStatus: () => true
@@ -68,7 +79,12 @@ const JellyfinService = {
 
             return data
         },
-        // Get session by user ID
+
+        /**
+         * Get session by user ID
+         * @param UserId The user ID to get session for
+         * @returns SessionInfo | null - User's session info object or null if not found
+         */
         async GetSessionByUserID(UserId: string): Promise<SessionInfo | null> {
             const sessions = await this.GetSessions()
 
@@ -83,7 +99,10 @@ const JellyfinService = {
         }
     },
     User: {
-        // Get my session, using env variable JELLYFIN_TARGET_USERID
+        /**
+         * Get my session, using userID from env JELLYFIN_TARGET_USERID. Note 1 user can have multiple sessions, this function will return the first found session.
+         * @returns SessionInfo | null - my session info object or null if not found
+         */
         async GetMySession(): Promise<SessionInfo | null> {
             const sessions = await JellyfinService.Session.GetSessions()
             const myUserID = process.env.JELLYFIN_TARGET_USERID
@@ -102,7 +121,10 @@ const JellyfinService = {
 
             return mySession
         },
-        // Get my now playing data, by me i meant using JELLYFIN_TARGET_USERID in env variable file
+        /**
+         * Get my now playing, using userID from JELLYFIN_TARGET_USERID in env variable file
+         * @returns NowPlayingItem | null - my now playing item or null if not found
+         */
         async GetMyNowPlayingData(): Promise<NowPlayingItem | null> {
             const mySession = await this.GetMySession()
 
@@ -115,7 +137,10 @@ const JellyfinService = {
 
             return NowPlayingItem
         },
-        // Get all users sessions
+        /**
+         * Get all users sessions from backend view
+         * @returns GetUsersSessionsResult - object containing count and array of users' session info
+         */
         async GetUsersSessions(): Promise<GetUsersSessionsResult> {
             const sessions = await JellyfinService.Session.GetSessions()
 

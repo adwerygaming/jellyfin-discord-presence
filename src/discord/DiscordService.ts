@@ -13,6 +13,10 @@ let isIdle = false
 let wasTellingIdle = false
 
 export const DiscordService = {
+    /**
+     * Update Discord Rich Presence based on Jellyfin now playing data. Main function to update RPC. Edit here for custom formatting.
+     * @returns nothing
+     */
     UpdateRPC: async () => {
         const mySession = await JellyfinService.User.GetMySession()
 
@@ -21,7 +25,7 @@ export const DiscordService = {
             const np = mySession?.NowPlayingItem
             const ps = mySession?.PlayState
             const isPaused = ps?.IsPaused
-            const clientName = mySession.Client // likely 'Jellyfin Web' or 'Jellyfin Android'
+            const clientName = mySession.Client // 'Jellyfin Web' or 'Jellyfin Android'
 
             const obj: Presence = {
                 startTimestamp: undefined,
