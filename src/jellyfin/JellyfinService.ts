@@ -21,16 +21,16 @@ const JellyfinService = {
             });
 
             if (response.status == 401) {
-                console.log(`[${Tags.Jellyfin}] Failed to get server info: ${response.status}. Please update your jellyfin access token.`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Failed to get server info: ${response.status}. Please update your jellyfin access token.`);
+                return null;
             }
 
             if (response.status != 200) {
-                console.log(`[${Tags.Jellyfin}] Failed to get server info: ${response.status}`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Failed to get server info: ${response.status}`);
+                return null;
             }
 
-            return response.data
+            return response.data;
         },
 
         /**
@@ -43,16 +43,16 @@ const JellyfinService = {
             });
 
             if (response.status == 401) {
-                console.log(`[${Tags.Jellyfin}] Failed to get users info: ${response.status}. Please update your jellyfin access token.`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Failed to get users info: ${response.status}. Please update your jellyfin access token.`);
+                return null;
             }
 
             if (response.status != 200) {
-                console.log(`[${Tags.Jellyfin}] Failed to get users info: ${response.status}`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Failed to get users info: ${response.status}`);
+                return null;
             }
 
-            return response.data
+            return response.data;
         }
     },
     Session: {
@@ -66,18 +66,18 @@ const JellyfinService = {
             });
 
             if (response.status == 401) {
-                console.log(`[${Tags.Jellyfin}] Failed to get sessions info: ${response.status}. Please update your jellyfin access token.`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Failed to get sessions info: ${response.status}. Please update your jellyfin access token.`);
+                return null;
             }
 
             if (response.status != 200) {
-                console.log(`[${Tags.Jellyfin}] Failed to get sessions info: ${response.status}`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Failed to get sessions info: ${response.status}`);
+                return null;
             }
 
             const data = response.data;
 
-            return data
+            return data;
         },
 
         /**
@@ -86,16 +86,16 @@ const JellyfinService = {
          * @returns SessionInfo | null - User's session info object or null if not found
          */
         async GetSessionByUserID(UserId: string): Promise<SessionInfo | null> {
-            const sessions = await this.GetSessions()
+            const sessions = await this.GetSessions();
 
             if (!sessions) {
-                return null
+                return null;
             }
 
             // console.log(`[${Tags.Debug}] User ID: ${UserId}`)
-            const mySession = sessions?.find((x) => x.UserId == UserId) ?? null
+            const mySession = sessions?.find((x) => x.UserId == UserId) ?? null;
 
-            return mySession
+            return mySession;
         }
     },
     User: {
@@ -104,22 +104,22 @@ const JellyfinService = {
          * @returns SessionInfo | null - my session info object or null if not found
          */
         async GetMySession(): Promise<SessionInfo | null> {
-            const sessions = await JellyfinService.Session.GetSessions()
-            const myUserID = process.env.JELLYFIN_TARGET_USERID
+            const sessions = await JellyfinService.Session.GetSessions();
+            const myUserID = process.env.JELLYFIN_TARGET_USERID;
 
             if (!myUserID) {
-                console.log(`[${Tags.System}] JELLYFIN_TARGET_USERID is empty! Please fill out on .env file!`)
-                return null
+                console.log(`[${Tags.System}] JELLYFIN_TARGET_USERID is empty! Please fill out on .env file!`);
+                return null;
             }
 
             if (!sessions) {
-                return null
+                return null;
             }
 
             // console.log(`[${Tags.Debug}] User ID: ${myUserID}`)
-            const mySession = sessions?.find((x) => x.UserId == myUserID) ?? null
+            const mySession = sessions?.find((x) => x.UserId == myUserID) ?? null;
 
-            return mySession
+            return mySession;
         },
         
         /**
@@ -127,16 +127,16 @@ const JellyfinService = {
          * @returns NowPlayingItem | null - my now playing item or null if not found
          */
         async GetMyNowPlayingData(): Promise<NowPlayingItem | null> {
-            const mySession = await this.GetMySession()
+            const mySession = await this.GetMySession();
 
             if (!mySession) {
-                console.log(`[${Tags.Jellyfin}] Couldn't find any active session. Try opening the Jellyfin app.`)
-                return null
+                console.log(`[${Tags.Jellyfin}] Couldn't find any active session. Try opening the Jellyfin app.`);
+                return null;
             }
 
-            const NowPlayingItem = mySession.NowPlayingItem
+            const NowPlayingItem = mySession.NowPlayingItem;
 
-            return NowPlayingItem
+            return NowPlayingItem;
         },
 
         /**
@@ -144,16 +144,16 @@ const JellyfinService = {
          * @returns GetUsersSessionsResult - object containing count and array of users' session info
          */
         async GetUsersSessions(): Promise<GetUsersSessionsResult> {
-            const sessions = await JellyfinService.Session.GetSessions()
+            const sessions = await JellyfinService.Session.GetSessions();
 
             const output = {
                 count: sessions?.length ?? 0,
                 users: sessions ?? []
-            }
+            };
 
-            return output
+            return output;
         }
     }
-}
+};
 
 export default JellyfinService;

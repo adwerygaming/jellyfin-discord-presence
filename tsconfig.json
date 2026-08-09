@@ -1,25 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
-    "module": "nodenext",
-    "target": "es2024",
+    "module": "es2022",
+    "target": "es2023",
     "rootDir": "src",
     "outDir": "dist",
-
     "strict": true,
-    "strictNullChecks": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-
-    "noImplicitReturns": true,
-    "noFallthroughCasesInSwitch": true,
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["node"],
 
     "noUnusedLocals": true,
     "noUnusedParameters": true
   },
-  "include": ["src"],
+  "include": ["src", "apps/**/src"],
   "exclude": ["coverage", "dist", "docs", "node_modules"]
 }
