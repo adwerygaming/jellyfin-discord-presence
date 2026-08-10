@@ -2,6 +2,7 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "module": "es2022",
+    "moduleResolution": "bundler",
     "target": "es2023",
     "rootDir": "src",
     "outDir": "dist",

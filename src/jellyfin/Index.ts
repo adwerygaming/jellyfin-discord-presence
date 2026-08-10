@@ -1,35 +1,48 @@
-import Tags from "../utils/Tags.js";
-import JellyfinService from "./JellyfinService.js";
+import { input } from '@inquirer/prompts';
+import { DatabaseService } from '../database/DatabaseService.js';
+import tags from '../utils/Tags.js';
 
-const JELLYFIN_URL = process.env.JELLYFIN_URL;
-const JELLYFIN_TARGET_USERID = process.env.JELLYFIN_TARGET_USERID;
+const db = new DatabaseService();
 
-if (!JELLYFIN_URL) {
-    console.log(`[${Tags.Jellyfin}] JELLYFIN_URL is missing on .env file. Please fill it out.`);
-    process.exit(1);
-}
+const serverInfo = await db.getServerInfo();
 
-if (!JELLYFIN_TARGET_USERID) {
-    console.log(`[${Tags.Jellyfin}] JELLYFIN_TARGET_USERID is missing on .env file. Please fill it out.`);
-    process.exit(1);
-}
+if (!serverInfo) {
+    console.log(`[${tags.System}] Welcome to Jellyfin Discord Presence! Let's set up your Jellyfin server connection.`);
+    const baseUrl = await input({
+        message: 'Enter your Jellyfin server base URL (e.g., http://localhost:8096):',
+        validate: (value) => {
+            if (!value) {
+                return 'Base URL cannot be empty.';
+            }
 
-console.log(`[${Tags.Jellyfin}] Server Url: ${JELLYFIN_URL ?? "Unknown"}`);
+            try {
+                new URL(value);
+                return true;
+            } catch {
+                return 'Please enter a valid URL.';
+            }
+        },
+        default: 'http://localhost:8096',
+    });
 
-const serverinfo = await JellyfinService.Server.GetServerInfo();
-console.log(`[${Tags.Jellyfin}] Connected to ${serverinfo?.ServerName ?? "Unknown Server Name"} running v${serverinfo?.Version ?? "Unknown Version"}.`);
+    console.log(`[${tags.Info}] You can get your Jellyfin Server API key from ${baseUrl}/web/#/dashboard/keys`);
+    const apiKey = await input({
+        message: 'Enter your Jellyfin Server API key:',
+        validate: (value) => {
+            if (!value) {
+                return 'API key cannot be empty.';
+            }
+            return true;
+        },
+    });
 
-const users = await JellyfinService.Server.GetAllUsers();
-if (users && users.length > 0) {
-    console.log(`[${Tags.Jellyfin}] Found ${users.length} users on the server.`);
+    try {
 
-    const targetUser = users.filter((x) => x.Id == JELLYFIN_TARGET_USERID)?.[0];
+        
 
-    if (targetUser) {
-        console.log(`[${Tags.Jellyfin}] Currently tracking user: ${targetUser.Name}`);
-    } else {
-        console.log(`[${Tags.Jellyfin}] Couldn't find the target user with ID: ${JELLYFIN_TARGET_USERID}`);
+        await db.updateServerInfo({ BaseUrl: baseUrl, ApiKey: apiKey, Name: 'Jellyfin Server' });
+        console.log(`[${tags.System}] Jellyfin server connection saved successfully!`);
+    } catch (e) {
+        console.error(`[${tags.Error}] Failed to save Jellyfin server connection.`, e);
     }
-} else {
-    console.log(`[${Tags.Jellyfin}] There is no users on the server.`);
 }

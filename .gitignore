@@ -139,3 +139,6 @@ dist
 package-lock.json
 # This line was added by CommitAI.
 .commitai
+
+db/
+*.sqlite
