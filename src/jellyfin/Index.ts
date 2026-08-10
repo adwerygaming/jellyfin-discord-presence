@@ -93,12 +93,31 @@ async function promptAccountToTrack(): Promise<void> {
         console.clear();
         const sessions = await jellyfin.getSessions();
 
+        if (sessions.length === 0) {
+            console.log(`[${tags.Jellyfin}] No active sessions found. Please open Jellyfin on one of your devices and try again.`);
+            await pressAnyKeyToContinue();
+            continue;
+        }
+
         console.log(`[${tags.Jellyfin}] Please select a user to track from the following active sessions:`);
-        const users = sessions.map(session => {
+
+        const tempSessionMap = new Map<string, string>();
+
+        for (const session of sessions) {
+            if (!session.UserId || !session.UserName) {
+                console.error(`[${tags.Error}] Session missing UserId or UserName. Skipping this session.`);
+                continue;
+            }
+
+            if (!tempSessionMap.has(session.UserId)) {
+                tempSessionMap.set(session.UserId, session.UserName);
+            }
+        }
+
+        const users = Array.from(tempSessionMap.entries()).map(([userId, userName]) => {
             return {
-                name: `${session.UserName} (${session.UserId})`,
-                value: session.UserId,
-                description: `Server: ${session.ServerId} | From: ${session.RemoteEndPoint}, Device: ${session.DeviceName}, App: ${session.ApplicationVersion}`,
+                name: `${userName} (${userId})`,
+                value: userId
             };
         });
 
@@ -148,6 +167,7 @@ const updateInterval = settings.updateInterval;
 
 setInterval(() => {
     (async (): Promise<void> => {
+        console.clear();
         const connTest = await jellyfin.testConnection();
 
         if (!connTest) {
@@ -155,12 +175,15 @@ setInterval(() => {
             return;
         }
 
-        console.log(`[${tags.System}] Using Jellyfin server: ${serverCreds.BaseUrl} (v${connTest?.ServerVersion})`);
+        console.log(`[${tags.Jellyfin}] Using Jellyfin server: ${serverCreds.BaseUrl} (v${connTest?.ServerVersion})`);
+        console.log(`[${tags.Jellyfin}] Update interval: ${updateInterval / 1000}s`);
         console.log("");
 
         const sessions = await jellyfin.getMyActiveSessions();
         
         console.log(`[${tags.Jellyfin}] Tracking user: ${sessions[0]?.UserName} (${sessions[0]?.UserId})`);
+        console.log(`[${tags.Jellyfin}] ------------------------------------------------`);
+        console.log("");
 
         if (sessions.length === 0) {
             console.log(`[${tags.Jellyfin}] No active sessions found.`);
@@ -168,19 +191,23 @@ setInterval(() => {
         }
 
         if (sessions.length > 1) {
-            console.log(`[${tags.Jellyfin}] You have ${sessions.length} active sessions. Tracking the first one found.`);
+            console.log(`[${tags.Info}] You have ${sessions.length} active sessions. Tracking the first one that is playing.`);
+            console.log("");
         }
 
         for (let i = 0; i < sessions.length; i++) {
             const session = sessions[i];
             const np = session.NowPlayingItem;
 
-            console.log(`[${tags.Jellyfin}] Session ${i + 1} [${session.DeviceName} - ${session.ApplicationVersion}]:`);
+            if (sessions.length > 1) {
+                console.log(`[${tags.Jellyfin}] Session #${i + 1} [${session.DeviceName} - ${session.ApplicationVersion}] ${i == 0 ? "<-- (Tracking this one)" : ""}`);
+            }
 
             if (np) {
-                const type = np.Type;
                 const episodeName = np.Name;
                 const seriesName = np.SeriesName;
+                const parrentShowId = np.ParentId;
+                const serverId = session.ServerId;
 
                 const positionTicks = session.PlayState?.PositionTicks ?? 0;
                 const runtimeTicks = session.NowPlayingItem?.RunTimeTicks ?? 0;
@@ -191,14 +218,19 @@ setInterval(() => {
                 const episodeIndex = np.IndexNumber;
                 const seasonIndex = np.ParentIndexNumber;
 
-                console.log(`[${tags.Jellyfin}] Currently ${type?.toLowerCase()}:`);
+                const seriesUrl = `${serverCreds.BaseUrl}/web/#/details?id=${parrentShowId}&serverId=${serverId}`;
+
+                console.log(`[${tags.Jellyfin}] Currently Playing:`);
                 console.log(`[${tags.Jellyfin}] Series Name     : ${seriesName}`);
                 console.log(`[${tags.Jellyfin}] Episode Name    : ${episodeName}`);
-                console.log(`[${tags.Jellyfin}] Season          : ${seasonIndex}, Episode: ${episodeIndex}`);
-                console.log(`[${tags.Jellyfin}] Position        : ${positionMs / 1000}s / ${runtimeMs / 1000}s`);
+                console.log(`[${tags.Jellyfin}] Episode Details : Season ${seasonIndex}, Episode ${episodeIndex}`);
+                console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)}`);
+                console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
             } else {
                 console.log(`[${tags.Jellyfin}] Currently playing any media.`);
             }
+
+            console.log("");
         }
 
     })();
@@ -235,7 +267,7 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                     const episodeIndex = np.IndexNumber;
                     const seasonIndex = np.ParentIndexNumber;
                     const fullEpisodeString = episodeName ?? "Unknown Episode";
-                    const fullSessionString = `S${seasonIndex}E:${episodeIndex}`;
+                    const fullSessionString = `S${seasonIndex}:E${episodeIndex}`;
                     const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
 
                     results = ({
@@ -269,4 +301,19 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
     } else {
         return null;
     }
+}
+
+function formatDuration(seconds: number): string {
+    const totalSeconds = Math.floor(seconds);
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+
+    const minsStr = mins.toString().padStart(2, "0");
+    const secsStr = secs.toString().padStart(2, "0");
+
+    if (hrs > 0) {
+        return `${hrs}:${minsStr}:${secsStr}`;
+    }
+    return `${minsStr}:${secsStr}`;
 }
