@@ -1,3 +1,4 @@
+import { Jellyfin } from '@jellyfin/sdk';
 import gradient from 'gradient-string';
 
 const RawTags = {
@@ -10,6 +11,7 @@ const RawTags = {
   Info: { colors: ['#1ABC9C', '#16A085'] },
   Job: { colors: ['#607D8B', '#455A64'] },
   Database: { colors: ['#336791', '#003B57'] },
+  Jellyfin: { colors: ['#304485', '#3f78ac'] }
 };
 
 type TagConfig = { colors: string[] };

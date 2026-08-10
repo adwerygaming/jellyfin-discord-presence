@@ -1,10 +1,9 @@
 import { SessionInfoDto } from '@jellyfin/sdk/lib/generated-client/index.js';
 import { db } from './Client';
 
-interface ServerInfo {
+export interface ServerInfo {
     BaseUrl: string;
     ApiKey: string;
-    Name: string;
 }
 
 export class DatabaseService {
@@ -22,8 +21,8 @@ export class DatabaseService {
         return await db.get('serverInfo');
     }
 
-    async updateServerInfo(data: ServerInfo): Promise<true> {
+    async updateServerInfo(data: ServerInfo): Promise<ServerInfo> {
         await db.set('serverInfo', data);
-        return true;
+        return data;
     }
 }

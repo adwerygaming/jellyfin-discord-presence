@@ -9,6 +9,7 @@ const db = new DatabaseService();
 interface TestConnectionResult {
   ServerId: string;
   RemoteEndPoint: string;
+  ServerVersion: string;
 }
 
 export class JellyfinService {
@@ -41,9 +42,12 @@ export class JellyfinService {
         return null;
       }
 
+      console.log(session);
+
       return {
         ServerId: session.ServerId || 'Unknown',
-        RemoteEndPoint: session.RemoteEndPoint || 'Unknown'
+        RemoteEndPoint: session.RemoteEndPoint || 'Unknown',
+        ServerVersion: session.ApplicationVersion || 'Unknown'
       };
     } catch (e) {
       console.error('Error testing connection to Jellyfin server:', e);
@@ -68,8 +72,13 @@ export class JellyfinService {
     }
   }
 
-  async getActiveSessions(): Promise<SessionInfoDto[]> {
+  async getSessions(): Promise<SessionInfoDto[]> {
     const sessions = await this.getSessionInfo();
+    return sessions;
+  }
+
+  async getActiveSessions(): Promise<SessionInfoDto[]> {
+    const sessions = await this.getSessions();
     return sessions.filter(session => session.IsActive);
   }
 
