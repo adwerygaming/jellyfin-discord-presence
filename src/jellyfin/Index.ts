@@ -242,6 +242,7 @@ setInterval(() => {
 
             if (sessions.length > 1) {
                 console.log(`[${tags.Jellyfin}] Session #${i + 1} [${session.DeviceName} - ${session.ApplicationVersion}] ${i == 0 ? "<-- (Tracking this one)" : ""}`);
+                console.log(`[${tags.Jellyfin}] ------------------------------------------------`);
             }
 
             if (np) {
@@ -265,6 +266,7 @@ setInterval(() => {
                 console.log(`[${tags.Jellyfin}] Series Name     : ${seriesName}`);
                 console.log(`[${tags.Jellyfin}] Episode Name    : ${episodeName}`);
                 console.log(`[${tags.Jellyfin}] Episode Details : Season ${seasonIndex}, Episode ${episodeIndex}`);
+                console.log(`[${tags.Jellyfin}] Overview        : ${np.Overview ?? "No overview available."}`);
                 console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)}`);
                 console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
             } else {
