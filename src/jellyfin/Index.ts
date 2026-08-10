@@ -1,9 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unnecessary-condition */
 import { confirm, input, select } from '@inquirer/prompts';
+import { SetActivity } from '@xhayper/discord-rpc';
+import { ActivityType } from "discord-api-types/v10";
 import { DatabaseService, ServerInfo } from '../database/DatabaseService.js';
 import tags from '../utils/Tags.js';
 import { JellyfinService } from './JellyfinService.js';
 
 const db = new DatabaseService();
+
+const TICKS_TO_MS = 10000;
 
 async function pressAnyKeyToContinue(): Promise<void> {
     await input({
@@ -142,4 +147,69 @@ if (!savedMe) {
     await promptAccountToTrack();
 }
 
+export async function getNowPlaying(): Promise<SetActivity | null> {
+    const myActiveSessions = await jellyfin.getMyActiveSessions();
+    const myActiveSession = myActiveSessions.length > 0 ? myActiveSessions[0] : null;
 
+    if (myActiveSession) {
+        const np = myActiveSession.NowPlayingItem;
+
+        if (np) {
+            const episodeName = np.Name;
+            const seriesName = np.SeriesName;
+            const showType = np.Type;
+            // const externalUrl = np.ExternalUrls?.find(d => d.Url);
+            // const parentShowId = np.ParentId;
+            const seasonId = np.SeasonId;
+
+            const positionTicks = myActiveSession.PlayState?.PositionTicks ?? 0;
+            const runtimeTicks = myActiveSession.NowPlayingItem?.RunTimeTicks ?? 0;
+
+            const positionMs = positionTicks / TICKS_TO_MS;
+            const runtimeMs = runtimeTicks / TICKS_TO_MS;
+
+            const startTimestamp = Date.now() - positionMs;
+            const endTimestamp = startTimestamp + runtimeMs;
+
+            let results: SetActivity | null = null;
+
+            switch (showType) {
+                case 'Episode': {
+                    const episodeIndex = np.IndexNumber;
+                    const seasonIndex = np.ParentIndexNumber;
+                    const fullEpisodeString = episodeName ?? "Unknown Episode";
+                    const fullSessionString = `S${seasonIndex}E:${episodeIndex}`;
+                    const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
+
+                    results = ({
+                        name: seriesName ?? "Jellyfin",
+                        type: ActivityType.Watching,
+                        details: fullEpisodeString,
+                        state: fullSessionString,
+                        largeImageUrl: showCoverArtUrl ?? undefined,
+                        startTimestamp,
+                        endTimestamp,
+                    });
+
+                    break;
+                }
+
+                case 'Audio':
+                    break;
+
+                case 'Movie':
+                    break;
+
+                default:
+                    console.error(`[${tags.Error}] Unhandled show type: ${showType}`);
+                    break;
+            }
+
+            return results;
+        } else {
+            return null;
+        }
+    } else {
+        return null;
+    }
+}

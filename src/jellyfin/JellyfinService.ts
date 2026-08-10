@@ -1,6 +1,6 @@
 import { Api } from "@jellyfin/sdk";
-import { SessionApi, SessionInfoDto } from "@jellyfin/sdk/lib/generated-client/index.js";
-import { getSessionApi } from "@jellyfin/sdk/lib/utils/api/index.js";
+import { BrandingApi, SessionApi, SessionInfoDto } from "@jellyfin/sdk/lib/generated-client/index.js";
+import { getBrandingApi, getSessionApi } from "@jellyfin/sdk/lib/utils/api/index.js";
 import { DatabaseService } from "../database/DatabaseService.js";
 import { jellyfin } from "./Client.js";
 
@@ -33,6 +33,11 @@ export class JellyfinService {
     return getSessionApi(client);
   }
 
+  private async getBranding(): Promise<BrandingApi> {
+    const client = await this.createClient();
+    return getBrandingApi(client);
+  }
+
   async testConnection(): Promise<TestConnectionResult | null> {
     try {
       const sessions = await this.getSessionInfo();
@@ -41,8 +46,6 @@ export class JellyfinService {
       if (!session) {
         return null;
       }
-
-      console.log(session);
 
       return {
         ServerId: session.ServerId || 'Unknown',
@@ -93,5 +96,13 @@ export class JellyfinService {
     const myUserId = savedMe.UserId;
     const me = sessions.filter(session => session.UserId === myUserId);
     return me;
+  }
+
+  async getShowCoverArtUrl(itemId: string | null | undefined): Promise<string | null> {
+    if (!itemId) return null;
+
+    // background-image: url("https://jellyfin.mdlab.my.id/Items/2bcea981a28d28e5831d0afe7f3b9ac8/Images/Primary?fillHeight=372&fillWidth=253&quality=96&tag=97279ba319e72ab1092bd74b756dbb97");
+    const coverArtUrl = `${this.baseUrl}/Items/${itemId}/Images/Primary`;
+    return coverArtUrl;
   }
 }
