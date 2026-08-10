@@ -3,6 +3,7 @@ import { db } from './Client';
 
 export interface ServerInfo {
     BaseUrl: string;
+    PublicBaseUrl: string | null;
     ApiKey: string;
 }
 

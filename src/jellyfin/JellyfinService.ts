@@ -95,9 +95,12 @@ export class JellyfinService {
 
   async getShowCoverArtUrl(itemId: string | null | undefined): Promise<string | null> {
     if (!itemId) return null;
+    
+    const serverCreds = await db.getServerInfo();
+    const baseUrl = serverCreds?.PublicBaseUrl ?? serverCreds?.BaseUrl;
 
     // background-image: url("https://jellyfin.mdlab.my.id/Items/2bcea981a28d28e5831d0afe7f3b9ac8/Images/Primary?fillHeight=372&fillWidth=253&quality=96&tag=97279ba319e72ab1092bd74b756dbb97");
-    const coverArtUrl = `${this.baseUrl}/Items/${itemId}/Images/Primary`;
+    const coverArtUrl = `${baseUrl}/Items/${itemId}/Images/Primary`;
     return coverArtUrl;
   }
 }
