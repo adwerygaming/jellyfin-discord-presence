@@ -1,6 +1,7 @@
 @echo off
 
-:start
 npm i
+
+:start
 npm run start
 goto start
