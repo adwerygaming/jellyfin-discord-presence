@@ -1,4 +1,3 @@
-import { Jellyfin } from '@jellyfin/sdk';
 import gradient from 'gradient-string';
 
 const RawTags = {
