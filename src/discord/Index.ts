@@ -1,9 +1,13 @@
+import { DatabaseService } from "../database/DatabaseService.js";
 import { getNowPlaying } from "../jellyfin/Index.js";
 import Tags from "../utils/Tags.js";
 import { client } from "./Client.js";
-import { DiscordRPC } from "./DiscordService.js";
+import { DiscordRPC } from "./DiscordRPC.js";
 
-const updateInterval = 1000 * 15; // Interval in seconds. I suggest putting around >15s
+const db = new DatabaseService();
+
+const settings = await db.getSettings();
+const updateInterval = settings.updateInterval;
 
 const discord = new DiscordRPC(client);
 

@@ -7,7 +7,6 @@ import tags from '../utils/Tags.js';
 import { JellyfinService } from './JellyfinService.js';
 
 const db = new DatabaseService();
-
 const TICKS_TO_MS = 10000;
 
 async function pressAnyKeyToContinue(): Promise<void> {
@@ -15,6 +14,7 @@ async function pressAnyKeyToContinue(): Promise<void> {
         message: 'Press any key to continue...',
     });
 }
+
 async function promptServerSetup(): Promise<ServerInfo> {
     while (true) {
         const serverInfo = await db.getServerInfo();
@@ -87,10 +87,6 @@ if (!serverCreds) {
 }
 
 const jellyfin = new JellyfinService(serverCreds.BaseUrl, serverCreds.ApiKey);
-const connTest = await jellyfin.testConnection();
-
-console.log(`[${tags.System}] Using Jellyfin server: ${serverCreds.BaseUrl} (v${connTest?.ServerVersion})`);
-console.log("");
 
 async function promptAccountToTrack(): Promise<void> {
     while (true) {
@@ -146,6 +142,67 @@ const savedMe = await db.getMe();
 if (!savedMe) {
     await promptAccountToTrack();
 }
+
+const settings = await db.getSettings();
+const updateInterval = settings.updateInterval;
+
+setInterval(() => {
+    (async (): Promise<void> => {
+        const connTest = await jellyfin.testConnection();
+
+        if (!connTest) {
+            console.error(`[${tags.Error}] Failed to connect to the Jellyfin server. Please check your base URL and API key.`);
+            return;
+        }
+
+        console.log(`[${tags.System}] Using Jellyfin server: ${serverCreds.BaseUrl} (v${connTest?.ServerVersion})`);
+        console.log("");
+
+        const sessions = await jellyfin.getMyActiveSessions();
+        
+        console.log(`[${tags.Jellyfin}] Tracking user: ${sessions[0]?.UserName} (${sessions[0]?.UserId})`);
+
+        if (sessions.length === 0) {
+            console.log(`[${tags.Jellyfin}] No active sessions found.`);
+            return;
+        }
+
+        if (sessions.length > 1) {
+            console.log(`[${tags.Jellyfin}] You have ${sessions.length} active sessions. Tracking the first one found.`);
+        }
+
+        for (let i = 0; i < sessions.length; i++) {
+            const session = sessions[i];
+            const np = session.NowPlayingItem;
+
+            console.log(`[${tags.Jellyfin}] Session ${i + 1} [${session.DeviceName} - ${session.ApplicationVersion}]:`);
+
+            if (np) {
+                const type = np.Type;
+                const episodeName = np.Name;
+                const seriesName = np.SeriesName;
+
+                const positionTicks = session.PlayState?.PositionTicks ?? 0;
+                const runtimeTicks = session.NowPlayingItem?.RunTimeTicks ?? 0;
+
+                const positionMs = positionTicks / TICKS_TO_MS;
+                const runtimeMs = runtimeTicks / TICKS_TO_MS;
+
+                const episodeIndex = np.IndexNumber;
+                const seasonIndex = np.ParentIndexNumber;
+
+                console.log(`[${tags.Jellyfin}] Currently ${type?.toLowerCase()}:`);
+                console.log(`[${tags.Jellyfin}] Series Name     : ${seriesName}`);
+                console.log(`[${tags.Jellyfin}] Episode Name    : ${episodeName}`);
+                console.log(`[${tags.Jellyfin}] Season          : ${seasonIndex}, Episode: ${episodeIndex}`);
+                console.log(`[${tags.Jellyfin}] Position        : ${positionMs / 1000}s / ${runtimeMs / 1000}s`);
+            } else {
+                console.log(`[${tags.Jellyfin}] Currently playing any media.`);
+            }
+        }
+
+    })();
+}, updateInterval);
 
 export async function getNowPlaying(): Promise<SetActivity | null> {
     const myActiveSessions = await jellyfin.getMyActiveSessions();

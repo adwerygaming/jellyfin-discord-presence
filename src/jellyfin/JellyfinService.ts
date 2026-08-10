@@ -1,6 +1,6 @@
 import { Api } from "@jellyfin/sdk";
-import { BrandingApi, SessionApi, SessionInfoDto } from "@jellyfin/sdk/lib/generated-client/index.js";
-import { getBrandingApi, getSessionApi } from "@jellyfin/sdk/lib/utils/api/index.js";
+import { SessionApi, SessionInfoDto } from "@jellyfin/sdk/lib/generated-client/index.js";
+import { getSessionApi } from "@jellyfin/sdk/lib/utils/api/index.js";
 import { DatabaseService } from "../database/DatabaseService.js";
 import { jellyfin } from "./Client.js";
 
@@ -31,11 +31,6 @@ export class JellyfinService {
   private async getSession(): Promise<SessionApi> {
     const client = await this.createClient();
     return getSessionApi(client);
-  }
-
-  private async getBranding(): Promise<BrandingApi> {
-    const client = await this.createClient();
-    return getBrandingApi(client);
   }
 
   async testConnection(): Promise<TestConnectionResult | null> {
