@@ -8,7 +8,6 @@ import tags from "./Tags.js";
 // Make sure to sync this to .env file.
 // Default value are: z.string()
 const envSchema = z.object({
-    NODE_ENV: z.enum(["PROD", "DEV"]).optional(),
     DISCORD_CLIENT_ID: z.string(),
 });
 
