@@ -280,6 +280,8 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                         endTimestamp,
                     });
 
+                    console.log(results);
+
                     break;
                 }
 

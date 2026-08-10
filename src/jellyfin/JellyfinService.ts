@@ -49,7 +49,7 @@ export class JellyfinService {
       };
     } catch (e) {
       console.error('Error testing connection to Jellyfin server:', e);
-      throw e;
+      return null;
     }
   }
 
