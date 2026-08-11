@@ -294,80 +294,85 @@ setInterval(() => {
 }, updateInterval);
 
 export async function getNowPlaying(): Promise<SetActivity | null> {
-    const myActiveSessions = await jellyfin.getMyActiveSessions();
-    const myActiveSession = myActiveSessions.length > 0 ? myActiveSessions[0] : null;
+    try {
+        const myActiveSessions = await jellyfin.getMyActiveSessions();
+        const myActiveSession = myActiveSessions.length > 0 ? myActiveSessions[0] : null;
 
-    if (myActiveSession) {
-        const np = myActiveSession.NowPlayingItem;
+        if (myActiveSession) {
+            const np = myActiveSession.NowPlayingItem;
 
-        if (np) {
-            const episodeName = np.Name;
-            const seriesName = np.SeriesName;
-            const showType = np.Type;
-            // const externalUrl = np.ExternalUrls?.find(d => d.Url);
-            // const parentShowId = np.ParentId;
-            const seasonId = np.SeasonId;
+            if (np) {
+                const episodeName = np.Name;
+                const seriesName = np.SeriesName;
+                const showType = np.Type;
+                // const externalUrl = np.ExternalUrls?.find(d => d.Url);
+                // const parentShowId = np.ParentId;
+                const seasonId = np.SeasonId;
 
-            const positionTicks = myActiveSession.PlayState?.PositionTicks ?? 0;
-            const runtimeTicks = myActiveSession.NowPlayingItem?.RunTimeTicks ?? 0;
+                const positionTicks = myActiveSession.PlayState?.PositionTicks ?? 0;
+                const runtimeTicks = myActiveSession.NowPlayingItem?.RunTimeTicks ?? 0;
 
-            const positionMs = positionTicks / TICKS_TO_MS;
-            const runtimeMs = runtimeTicks / TICKS_TO_MS;
+                const positionMs = positionTicks / TICKS_TO_MS;
+                const runtimeMs = runtimeTicks / TICKS_TO_MS;
 
-            const startTimestamp = Date.now() - positionMs;
-            const endTimestamp = startTimestamp + runtimeMs;
+                const startTimestamp = Date.now() - positionMs;
+                const endTimestamp = startTimestamp + runtimeMs;
 
-            let results: SetActivity | null = null;
+                let results: SetActivity | null = null;
 
-            switch (showType) {
-                case 'Episode': {
-                    const episodeIndex = np.IndexNumber;
-                    const seasonIndex = np.ParentIndexNumber;
-                    const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
+                switch (showType) {
+                    case 'Episode': {
+                        const episodeIndex = np.IndexNumber;
+                        const seasonIndex = np.ParentIndexNumber;
+                        const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
 
-                    // show chapters
-                    const chapters = np.Chapters ?? [];
-                    const lastChapter = chapters.length > 0 ? chapters[chapters.length - 1] : null;
-                    const currentChapter = chapters.find(ch => {
-                        if (ch.StartPositionTicks && ch.StartPositionTicks >= positionTicks && lastChapter?.StartPositionTicks && ch.StartPositionTicks <= lastChapter?.StartPositionTicks) {
-                            return ch;
-                        } else {
-                            return null;
-                        }
-                    });
+                        // show chapters
+                        const chapters = np.Chapters ?? [];
+                        const lastChapter = chapters.length > 0 ? chapters[chapters.length - 1] : null;
+                        const currentChapter = chapters.find(ch => {
+                            if (ch.StartPositionTicks && ch.StartPositionTicks >= positionTicks && lastChapter?.StartPositionTicks && ch.StartPositionTicks <= lastChapter?.StartPositionTicks) {
+                                return ch;
+                            } else {
+                                return null;
+                            }
+                        });
 
-                    const fullEpisodeString = episodeName ?? "Unknown Episode";
-                    const fullSessionString = `S${seasonIndex}:E${episodeIndex} ${currentChapter?.Name ? `• ${currentChapter.Name}` : ""}`;
+                        const fullEpisodeString = episodeName ?? "Unknown Episode";
+                        const fullSessionString = `S${seasonIndex}:E${episodeIndex} ${currentChapter?.Name ? `• ${currentChapter.Name}` : ""}`;
 
-                    results = ({
-                        name: seriesName ?? "Jellyfin",
-                        type: ActivityType.Watching,
-                        details: fullEpisodeString,
-                        state: fullSessionString,
-                        largeImageKey: showCoverArtUrl ?? undefined,
-                        startTimestamp,
-                        endTimestamp,
-                    });
+                        results = ({
+                            name: seriesName ?? "Jellyfin",
+                            type: ActivityType.Watching,
+                            details: fullEpisodeString,
+                            state: fullSessionString,
+                            largeImageKey: showCoverArtUrl ?? undefined,
+                            startTimestamp,
+                            endTimestamp,
+                        });
 
-                    break;
+                        break;
+                    }
+
+                    case 'Audio':
+                        break;
+
+                    case 'Movie':
+                        break;
+
+                    default:
+                        console.error(`[${tags.Error}] Unhandled show type: ${showType}`);
+                        break;
                 }
 
-                case 'Audio':
-                    break;
-
-                case 'Movie':
-                    break;
-
-                default:
-                    console.error(`[${tags.Error}] Unhandled show type: ${showType}`);
-                    break;
+                return results;
+            } else {
+                return null;
             }
-
-            return results;
         } else {
             return null;
         }
-    } else {
+    } catch {
+        console.error(`[${tags.Error}] Failed to get now playing information.`);
         return null;
     }
 }
