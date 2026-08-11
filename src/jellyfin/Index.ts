@@ -250,6 +250,7 @@ setInterval(() => {
                 const seriesName = np.SeriesName;
                 const parentShowId = np.ParentId;
                 const serverId = session.ServerId;
+                const showType = np.Type;
 
                 const positionTicks = session.PlayState?.PositionTicks ?? 0;
                 const runtimeTicks = session.NowPlayingItem?.RunTimeTicks ?? 0;
@@ -276,16 +277,48 @@ setInterval(() => {
 
                 const seriesUrl = `${serverCreds.BaseUrl}/web/#/details?id=${parentShowId}&serverId=${serverId}`;
 
-                console.log(`[${tags.Jellyfin}] Currently Playing:`);
-                console.log(`[${tags.Jellyfin}] Series Name     : ${seriesName}`);
-                console.log(`[${tags.Jellyfin}] Episode Name    : ${episodeName}`);
-                console.log(`[${tags.Jellyfin}] Episode Details : Season ${seasonIndex}, Episode ${episodeIndex}`);
-                console.log(`[${tags.Jellyfin}] Overview        : ${np.Overview ?? "No overview available."}`);
-                console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)}`);
-                if (currentChapter?.Name) console.log(`[${tags.Jellyfin}] Current Chapter : ${currentChapter.Name}`);
-                console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
+                console.log(`[${tags.Jellyfin}] Currently Playing`);
+
+                switch (showType) {
+                    case 'Episode': {
+                        console.log(`[${tags.Jellyfin}] Series Name     : ${seriesName}`);
+                        console.log(`[${tags.Jellyfin}] Episode Name    : ${episodeName}`);
+                        console.log(`[${tags.Jellyfin}] Episode Details : Season ${seasonIndex}, Episode ${episodeIndex}`);
+                        console.log(`[${tags.Jellyfin}] Overview        : ${np.Overview ?? "No overview available."}`);
+                        console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)} ${currentChapter?.Name ? `• ${currentChapter.Name}` : ""}`);
+                        console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
+
+                        break;
+                    }
+
+                    case 'Audio':
+                        break;
+
+                    case 'Movie': {
+                        // console.log(np);
+
+                        const videoStream = np.MediaStreams?.find(s => s.Type === 'Video');
+                        const resolution = videoStream ? `${videoStream.Width}x${videoStream.Height}` : 'N/A';
+                        const codec = videoStream?.Codec?.toUpperCase() ?? 'N/A';
+                        const genres = np.Genres?.join(', ') || 'N/A';
+
+                        console.log(`[${tags.Jellyfin}] Movie Name      : ${episodeName}`);
+                        console.log(`[${tags.Jellyfin}] Year            : ${np.ProductionYear ?? 'N/A'}`);
+                        console.log(`[${tags.Jellyfin}] Genres          : ${genres}`);
+                        console.log(`[${tags.Jellyfin}] Rating          : ${np.OfficialRating ?? 'N/A'} • Community ${np.CommunityRating ?? 'N/A'} • Critic ${np.CriticRating ?? 'N/A'}`);
+                        console.log(`[${tags.Jellyfin}] Quality         : ${resolution} ${codec}`);
+                        console.log(`[${tags.Jellyfin}] Overview        : ${np?.Overview && np.Overview.length > 100 ? np.Overview.slice(0, 100) + '...' : "No overview available."}`);
+                        console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)} ${currentChapter?.Name ? `• on ${currentChapter.Name}` : ""}`);
+                        console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
+                        break;
+                    }
+                    default:
+                        console.error(`[${tags.Error}] Unhandled show type: ${showType}`);
+                        break;
+                }
+                
             } else {
-                console.log(`[${tags.Jellyfin}] Currently playing any media.`);
+                console.log(`[${tags.Jellyfin}] Currently not playing anything at the moment.`);
             }
 
             console.log("");
@@ -318,13 +351,16 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                 const startTimestamp = Date.now() - positionMs;
                 const endTimestamp = startTimestamp + runtimeMs;
 
+                const showUrl = np.ExternalUrls?.find(d => d.Url)?.Url ?? undefined;
+
                 let results: SetActivity | null = null;
+
+                // console.log(np);
 
                 switch (showType) {
                     case 'Episode': {
                         const episodeIndex = np.IndexNumber;
                         const seasonIndex = np.ParentIndexNumber;
-                        const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
 
                         // show chapters
                         const chapters = np.Chapters ?? [];
@@ -340,11 +376,14 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                         const fullEpisodeString = episodeName ?? "Unknown Episode";
                         const fullSessionString = `S${seasonIndex}:E${episodeIndex} ${currentChapter?.Name ? `• ${currentChapter.Name}` : ""}`;
 
+                        const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
+
                         results = ({
                             name: seriesName ?? "Jellyfin",
                             type: ActivityType.Watching,
                             details: fullEpisodeString,
                             state: fullSessionString,
+                            url: showUrl,
                             largeImageKey: showCoverArtUrl ?? undefined,
                             startTimestamp,
                             endTimestamp,
@@ -356,8 +395,21 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                     case 'Audio':
                         break;
 
-                    case 'Movie':
+                    case 'Movie': {
+                        const fullMovieString = `${episodeName ?? "Unknown Movie"} ${np.ProductionYear ? `(${np.ProductionYear})` : ""}`;
+                        const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(np?.Id ?? np?.ParentId ?? null);
+
+                        results = ({
+                            name: seriesName ?? "Jellyfin",
+                            type: ActivityType.Watching,
+                            details: fullMovieString,
+                            url: showUrl,
+                            largeImageKey: showCoverArtUrl ?? undefined,
+                            startTimestamp,
+                            endTimestamp,
+                        });
                         break;
+                    }
 
                     default:
                         console.error(`[${tags.Error}] Unhandled show type: ${showType}`);

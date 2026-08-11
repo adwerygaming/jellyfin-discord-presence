@@ -21,17 +21,25 @@ client.on('ready', () => {
 
     console.log(`[${Tags.Discord}] Discord RPC connected as ${user.username} (${user.id})`);
 
+    async function updatePresence(): Promise<void> {
+        const jd = await getNowPlaying();
+
+        if (jd) {
+            discord.updatePresence(jd);
+        } else {
+            discord.clearPresence();
+        }
+    }
+
     setInterval(() => {
         (async (): Promise<void> => {
-            const jd = await getNowPlaying();
-
-            if (jd) {
-                discord.updatePresence(jd);
-            } else {
-                discord.clearPresence();
-            }
+            await updatePresence();
         })();
     }, updateInterval);
+
+    (async (): Promise<void> => {
+        await updatePresence();
+    })();
 });
 
 client.on("error", (e) => {
