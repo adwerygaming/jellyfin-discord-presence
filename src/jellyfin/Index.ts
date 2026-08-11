@@ -336,7 +336,7 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
 
             if (np) {
                 const episodeName = np.Name;
-                const seriesName = np.SeriesName;
+                const seriesName = np.SeriesName ?? np.Name;
                 const showType = np.Type;
                 // const externalUrl = np.ExternalUrls?.find(d => d.Url);
                 // const parentShowId = np.ParentId;
