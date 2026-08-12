@@ -1,12 +1,13 @@
 import { DatabaseService } from "../database/DatabaseService";
-import { ServerCredsNotFoundError } from "../utils/Errors";
+import { promptServerSetup } from "./functions/PromptServerSetup";
 import { JellyfinService } from "./JellyfinService";
 
 const db = new DatabaseService();
-const serverCreds = await db.getServerInfo();
+let serverCreds = await db.getServerInfo();
 
 if (!serverCreds) {
-    throw new ServerCredsNotFoundError();
+    serverCreds = await promptServerSetup();
+    // throw new ServerCredsNotFoundError();
 }
 
 export const jellyfin = new JellyfinService(serverCreds.BaseUrl, serverCreds.ApiKey);

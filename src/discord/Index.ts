@@ -85,6 +85,7 @@ client.on("error", (e) => {
     console.error(e);
 });
 
+console.log("");
 console.log(`[${Tags.Discord}] Connecting to Discord RPC...`);
 
 try {

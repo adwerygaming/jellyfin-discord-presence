@@ -1,4 +1,4 @@
-import { BaseItemDto, ChapterInfo } from "@jellyfin/sdk/lib/generated-client/index";
+import { BaseItemDto, ChapterInfo, SessionInfoDto } from "@jellyfin/sdk/lib/generated-client/index";
 import { DatabaseService } from "../../database/DatabaseService";
 import { ServerCredsNotFoundError } from "../../utils/Errors";
 import tags from "../../utils/Tags";
@@ -13,6 +13,7 @@ const serverCreds = await db.getServerInfo();
 interface NowPlayingBaseItem {
     type: 'Episode' | 'Movie';
     item: BaseItemDto;
+    session: SessionInfoDto;
     
     showUrl?: string | null;
     localShowUrl: string | null;
@@ -48,11 +49,11 @@ type NowPlayingItem = NowPlayingEpisodeItem | NowPlayingMovieItem;
 export async function getNowPlaying(): Promise<NowPlayingItem | null> {
 
     try {
-        const myActiveSessions = await jellyfin.getMyActiveSessions();
-        const myActiveSession = myActiveSessions.length > 0 ? myActiveSessions[0] : null;
+        const activeSessions = await jellyfin.getMyActiveSessions();
+        const activeSession = activeSessions.length > 0 ? activeSessions[0] : null;
 
-        if (myActiveSession) {
-            const np = myActiveSession.NowPlayingItem;
+        if (activeSession) {
+            const np = activeSession.NowPlayingItem;
 
             if (np) {
                 const episodeName = np.Name;
@@ -61,9 +62,9 @@ export async function getNowPlaying(): Promise<NowPlayingItem | null> {
                 const parentShowId = np.ParentId;
                 const seasonId = np.SeasonId;
                 
-                const serverId = myActiveSession.ServerId;
-                const positionTicks = myActiveSession.PlayState?.PositionTicks ?? 0;
-                const runtimeTicks = myActiveSession.NowPlayingItem?.RunTimeTicks ?? 0;
+                const serverId = activeSession.ServerId;
+                const positionTicks = activeSession.PlayState?.PositionTicks ?? 0;
+                const runtimeTicks = activeSession.NowPlayingItem?.RunTimeTicks ?? 0;
 
                 const positionMs = positionTicks / TICKS_TO_MS;
                 const runtimeMs = runtimeTicks / TICKS_TO_MS;
@@ -99,17 +100,22 @@ export async function getNowPlaying(): Promise<NowPlayingItem | null> {
                         results = ({
                             type: 'Episode',
                             item: np,
+                            session: activeSession,
+                            
                             seriesName,
                             fullEpisodeString,
                             fullSessionString,
+
                             showUrl,
+                            localShowUrl,
                             showCoverArtUrl,
                             currentChapter,
+                            
                             positionTicks,
                             runtimeTicks,
                             startTimestamp,
                             endTimestamp,
-                            localShowUrl,
+                            
                             resolution,
                             codec,
                             genres
@@ -128,18 +134,23 @@ export async function getNowPlaying(): Promise<NowPlayingItem | null> {
                         results = ({
                             type: 'Movie',
                             item: np,
+                            session: activeSession,
+
                             seriesName,
                             fullMovieString,
+                            
                             showUrl,
+                            localShowUrl,
                             showCoverArtUrl,
+                            
                             startTimestamp,
                             endTimestamp,
-                            localShowUrl,
+                            positionTicks,
+                            runtimeTicks,
+                            
                             codec,
                             resolution,
                             genres,
-                            positionTicks,
-                            runtimeTicks
                         });
 
                         break;

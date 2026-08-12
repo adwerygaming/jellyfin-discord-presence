@@ -32,6 +32,7 @@
     "eslint": "^9.39.2",
     "jiti": "^2.7.0",
     "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
     "tsup": "^8.5.1",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3",
@@ -49,5 +50,10 @@
     "inquirer": "^14.0.2",
     "quick.db": "^9.1.7",
     "zod": "^4.4.3"
+  },
+  "allowScripts": {
+    "esbuild@0.27.2": true,
+    "esbuild@0.28.2": true,
+    "better-sqlite3@13.0.3": true
   }
 }

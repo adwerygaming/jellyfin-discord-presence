@@ -47,36 +47,56 @@ export async function updateProgress(): Promise<void> {
 
         const data = await getNowPlaying();
 
-        const startTime = formatDuration(data?.positionTicks ? data.positionTicks / TICKS_TO_S : 0);
-        const endTime = formatDuration(data?.runtimeTicks ? data.runtimeTicks / TICKS_TO_S : 0);
+        for (let i = 0; i < sessions.length; i++) {
+            const session = sessions[i];
 
-        const currentPlaybackPosString = `${startTime} / ${endTime}`;
-        const currentChapterString = data?.currentChapter?.Name ? `• on ${data.currentChapter.Name}` : "";
+            if (!session.IsActive) {
+                console.log(`[${tags.Jellyfin}] Session ${i + 1} | ${sessions[i].DeviceName} (Jellyfin v${sessions[i].DeviceType ?? sessions[i].ApplicationVersion})`);
+                console.log(`[${tags.Jellyfin}] No playback data available for this session.`);
+                console.log("");
+                continue;
+            };
 
-        switch (data?.type) {
-            case 'Episode':
-                console.log(`[${tags.Jellyfin}] Series Name     : ${data.seriesName}`);
-                console.log(`[${tags.Jellyfin}] Episode Name    : ${data.fullEpisodeString}`);
-                console.log(`[${tags.Jellyfin}] Episode Details : ${data.fullSessionString}`);
-                console.log(`[${tags.Jellyfin}] Overview        : ${data.item.Overview ?? "No overview available."}`);
-                console.log(`[${tags.Jellyfin}] Position        : ${currentPlaybackPosString} ${currentChapterString}`);
-                console.log(`[${tags.Jellyfin}] Series URL      : ${data.localShowUrl}`);
-                break;
+            if (sessions.length > 1) {
+                console.log(`[${tags.Jellyfin}] Session ${i + 1} | ${session.DeviceName} (Jellyfin v${session.DeviceType ?? session.ApplicationVersion}) ${i === 0 ? "<---- (tracking this one)" : ""}`);
+            }
 
-            case 'Movie':
-                console.log(`[${tags.Jellyfin}] Movie Name      : ${data.fullMovieString}`);
-                console.log(`[${tags.Jellyfin}] Year            : ${data.item.ProductionYear ?? 'N/A'}`);
-                console.log(`[${tags.Jellyfin}] Genres          : ${data.genres}`);
-                console.log(`[${tags.Jellyfin}] Rating          : ${data.item.OfficialRating ?? 'N/A'} • Community ${data.item.CommunityRating ?? 'N/A'} • Critic ${data.item.CriticRating ?? 'N/A'}`);
-                console.log(`[${tags.Jellyfin}] Quality         : ${data.resolution} ${data.codec}`);
-                console.log(`[${tags.Jellyfin}] Overview        : ${data.item.Overview && data.item.Overview.length > 100 ? data.item.Overview.slice(0, 100) + '...' : "No overview available."}`);
-                console.log(`[${tags.Jellyfin}] Position        : ${currentPlaybackPosString} ${currentChapterString}`);
-                console.log(`[${tags.Jellyfin}] Series URL      : ${data.localShowUrl}`);
-                break;
+            const startTime = formatDuration(data?.positionTicks ? data.positionTicks / TICKS_TO_S : 0);
+            const endTime = formatDuration(data?.runtimeTicks ? data.runtimeTicks / TICKS_TO_S : 0);
 
-            default:
-                break;
+            const currentPlaybackPosString = `${startTime} / ${endTime}`;
+            const currentChapterString = data?.currentChapter?.Name ? `• on ${data.currentChapter.Name}` : "";
+            const maxOverviewLength = 250;
+            const briefOverview = data?.item.Overview ? (data.item.Overview.length > maxOverviewLength ? data.item.Overview.slice(0, maxOverviewLength) + '...' : data.item.Overview) : "No overview available.";
+
+            switch (data?.type) {
+                case 'Episode':
+                    console.log(`[${tags.Jellyfin}] Series Name     : ${data.seriesName}`);
+                    console.log(`[${tags.Jellyfin}] Episode Name    : ${data.fullEpisodeString}`);
+                    console.log(`[${tags.Jellyfin}] Episode Details : ${data.fullSessionString}`);
+                    console.log(`[${tags.Jellyfin}] Overview        : ${briefOverview}`);
+                    console.log(`[${tags.Jellyfin}] Position        : ${currentPlaybackPosString} ${currentChapterString}`);
+                    console.log(`[${tags.Jellyfin}] Series URL      : ${data.localShowUrl}`);
+                    break;
+
+                case 'Movie':
+                    console.log(`[${tags.Jellyfin}] Movie Name      : ${data.fullMovieString}`);
+                    console.log(`[${tags.Jellyfin}] Year            : ${data.item.ProductionYear ?? 'N/A'}`);
+                    console.log(`[${tags.Jellyfin}] Genres          : ${data.genres}`);
+                    console.log(`[${tags.Jellyfin}] Rating          : ${data.item.OfficialRating ?? 'N/A'} • Community ${data.item.CommunityRating ?? 'N/A'} • Critic ${data.item.CriticRating ?? 'N/A'}`);
+                    console.log(`[${tags.Jellyfin}] Quality         : ${data.resolution} ${data.codec}`);
+                    console.log(`[${tags.Jellyfin}] Overview        : ${briefOverview}`);
+                    console.log(`[${tags.Jellyfin}] Position        : ${currentPlaybackPosString} ${currentChapterString}`);
+                    console.log(`[${tags.Jellyfin}] Series URL      : ${data.localShowUrl}`);
+                    break;
+
+                default:
+                    break;
+            }
+
+            console.log("");
         }
+
         
     } catch (e) {
         if (e instanceof ServerCredsNotFoundError) {
