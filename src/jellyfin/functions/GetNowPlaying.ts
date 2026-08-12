@@ -20,6 +20,8 @@ interface NowPlayingBaseItem {
     showCoverArtUrl: string | null;
     currentChapter?: ChapterInfo
 
+    positionTicks: number;
+    runtimeTicks: number;
     startTimestamp: number;
     endTimestamp: number;
 
@@ -103,6 +105,8 @@ export async function getNowPlaying(): Promise<NowPlayingItem | null> {
                             showUrl,
                             showCoverArtUrl,
                             currentChapter,
+                            positionTicks,
+                            runtimeTicks,
                             startTimestamp,
                             endTimestamp,
                             localShowUrl,
@@ -133,7 +137,9 @@ export async function getNowPlaying(): Promise<NowPlayingItem | null> {
                             localShowUrl,
                             codec,
                             resolution,
-                            genres
+                            genres,
+                            positionTicks,
+                            runtimeTicks
                         });
 
                         break;

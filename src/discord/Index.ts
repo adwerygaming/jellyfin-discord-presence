@@ -1,4 +1,5 @@
 import { SetActivity } from "@xhayper/discord-rpc";
+import { ActivityType } from 'discord-api-types/v10';
 import { DatabaseService } from "../database/DatabaseService.js";
 import { getNowPlaying } from "../jellyfin/functions/GetNowPlaying";
 import Tags from "../utils/Tags.js";
@@ -36,19 +37,25 @@ client.on('ready', () => {
             switch (jd.type) {
                 case 'Episode':
                     presenceData = {
+                        type: ActivityType.Watching,
                         name: jd.seriesName ?? "Jellyfin",
                         details: jd.fullEpisodeString,
                         state: jd.fullSessionString,
                         largeImageKey: jd.showCoverArtUrl ?? 'jellyfin_logo',
                         largeImageText: jd.seriesName ?? "Jellyfin",
+                        startTimestamp: jd.startTimestamp,
+                        endTimestamp: jd.endTimestamp,
                     };
                     break;
 
                 case 'Movie':
                     presenceData = {
+                        type: ActivityType.Watching,
                         name: jd.seriesName ?? "Jellyfin",
                         details: jd.fullMovieString,
                         largeImageKey: jd.showCoverArtUrl ?? 'jellyfin_logo',
+                        startTimestamp: jd.startTimestamp,
+                        endTimestamp: jd.endTimestamp,
                     };
                     break;
 
@@ -56,8 +63,7 @@ client.on('ready', () => {
                     break;
             }
 
-            console.log(presenceData);
-            // discord.updatePresence(presenceData);
+            discord.updatePresence(presenceData);
         } else {
             // discord.clearPresence();
         }

@@ -3,6 +3,7 @@ import { ServerCredsNotFoundError } from "../../utils/Errors";
 import { formatDuration } from "../../utils/FormatDuration";
 import tags from "../../utils/Tags";
 import { jellyfin } from "../ClientWrapper";
+import { TICKS_TO_S } from "../Index";
 import { getNowPlaying } from "./GetNowPlaying";
 import { pressAnyKeyToContinue } from "./PressAnyKeyToContinue";
 import { promptServerSetup } from "./PromptServerSetup";
@@ -46,8 +47,8 @@ export async function updateProgress(): Promise<void> {
 
         const data = await getNowPlaying();
 
-        const startTime = formatDuration(data?.startTimestamp ? data.startTimestamp / 1000 : 0);
-        const endTime = formatDuration(data?.endTimestamp ? data.endTimestamp / 1000 : 0);
+        const startTime = formatDuration(data?.positionTicks ? data.positionTicks / TICKS_TO_S : 0);
+        const endTime = formatDuration(data?.runtimeTicks ? data.runtimeTicks / TICKS_TO_S : 0);
 
         const currentPlaybackPosString = `${startTime} / ${endTime}`;
         const currentChapterString = data?.currentChapter?.Name ? `• on ${data.currentChapter.Name}` : "";
