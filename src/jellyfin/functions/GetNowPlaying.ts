@@ -1,5 +1,5 @@
-import { SetActivity } from "@xhayper/discord-rpc";
-import { ActivityType } from 'discord-api-types/v10';
+import { BaseItemDto, ChapterInfo } from "@jellyfin/sdk/lib/generated-client/index";
+import { DatabaseService } from "../../database/DatabaseService";
 import { ServerCredsNotFoundError } from "../../utils/Errors";
 import tags from "../../utils/Tags";
 import { jellyfin } from "../ClientWrapper";
@@ -7,7 +7,44 @@ import { TICKS_TO_MS } from "../Index";
 import { getCurrentChapter } from "./GetCurrentChapter";
 import { promptServerSetup } from "./PromptServerSetup";
 
-export async function getNowPlaying(): Promise<SetActivity | null> {
+const db = new DatabaseService();
+const serverCreds = await db.getServerInfo();
+
+interface NowPlayingBaseItem {
+    type: 'Episode' | 'Movie';
+    item: BaseItemDto;
+    
+    showUrl?: string | null;
+    localShowUrl: string | null;
+    
+    showCoverArtUrl: string | null;
+    currentChapter?: ChapterInfo
+
+    startTimestamp: number;
+    endTimestamp: number;
+
+    resolution: string | null;
+    codec: string | null;
+    genres: string | null;
+}
+
+interface NowPlayingEpisodeItem extends NowPlayingBaseItem {
+    type: 'Episode';
+    seriesName: string | null;
+    fullEpisodeString: string;
+    fullSessionString: string;
+}
+
+interface NowPlayingMovieItem extends NowPlayingBaseItem {
+    type: 'Movie';
+    seriesName: string | null;
+    fullMovieString: string;
+}
+
+type NowPlayingItem = NowPlayingEpisodeItem | NowPlayingMovieItem;
+
+export async function getNowPlaying(): Promise<NowPlayingItem | null> {
+
     try {
         const myActiveSessions = await jellyfin.getMyActiveSessions();
         const myActiveSession = myActiveSessions.length > 0 ? myActiveSessions[0] : null;
@@ -17,12 +54,12 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
 
             if (np) {
                 const episodeName = np.Name;
-                const seriesName = np.SeriesName ?? np.Name;
+                const seriesName = np.SeriesName ?? np.Name ?? null;
                 const showType = np.Type;
-                // const externalUrl = np.ExternalUrls?.find(d => d.Url);
-                // const parentShowId = np.ParentId;
+                const parentShowId = np.ParentId;
                 const seasonId = np.SeasonId;
-
+                
+                const serverId = myActiveSession.ServerId;
                 const positionTicks = myActiveSession.PlayState?.PositionTicks ?? 0;
                 const runtimeTicks = myActiveSession.NowPlayingItem?.RunTimeTicks ?? 0;
 
@@ -33,8 +70,17 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                 const endTimestamp = startTimestamp + runtimeMs;
 
                 const showUrl = np.ExternalUrls?.find(d => d.Url)?.Url ?? undefined;
+                const localShowUrl = `${serverCreds?.BaseUrl}/web/#/details?id=${parentShowId}&serverId=${serverId}`;
 
-                let results: SetActivity | null = null;
+                const chapters = np.Chapters ?? [];
+                const currentChapter = getCurrentChapter(chapters, positionTicks) ?? undefined;
+
+                const videoStream = np.MediaStreams?.find(s => s.Type === 'Video');
+                const resolution = videoStream ? `${videoStream.Width}x${videoStream.Height}` : null;
+                const codec = videoStream?.Codec?.toUpperCase() ?? null;
+                const genres = np.Genres?.join(', ') || null;
+
+                let results: NowPlayingItem | null = null;
 
                 // console.log(np);
 
@@ -43,30 +89,32 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                         const episodeIndex = np.IndexNumber;
                         const seasonIndex = np.ParentIndexNumber;
 
-                        // show chapters
-                        const chapters = np.Chapters ?? [];
-                        const currentChapter = getCurrentChapter(chapters, positionTicks);
-
                         const fullEpisodeString = episodeName ?? "Unknown Episode";
                         const fullSessionString = `S${seasonIndex}:E${episodeIndex} ${currentChapter?.Name ? `• ${currentChapter.Name}` : ""}`;
 
                         const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(seasonId);
 
                         results = ({
-                            name: seriesName ?? "Jellyfin",
-                            type: ActivityType.Watching,
-                            details: fullEpisodeString,
-                            state: fullSessionString,
-                            url: showUrl,
-                            largeImageKey: showCoverArtUrl ?? undefined,
+                            type: 'Episode',
+                            item: np,
+                            seriesName,
+                            fullEpisodeString,
+                            fullSessionString,
+                            showUrl,
+                            showCoverArtUrl,
+                            currentChapter,
                             startTimestamp,
                             endTimestamp,
+                            localShowUrl,
+                            resolution,
+                            codec,
+                            genres
                         });
-
                         break;
                     }
 
                     case 'Audio':
+                        console.log(`[${tags.Info}] Audio type is currently not handled.`);
                         break;
 
                     case 'Movie': {
@@ -74,14 +122,20 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
                         const showCoverArtUrl = await jellyfin.getShowCoverArtUrl(np.Id ?? np.ParentId ?? null);
 
                         results = ({
-                            name: seriesName ?? "Jellyfin",
-                            type: ActivityType.Watching,
-                            details: fullMovieString,
-                            url: showUrl,
-                            largeImageKey: showCoverArtUrl ?? undefined,
+                            type: 'Movie',
+                            item: np,
+                            seriesName,
+                            fullMovieString,
+                            showUrl,
+                            showCoverArtUrl,
                             startTimestamp,
                             endTimestamp,
+                            localShowUrl,
+                            codec,
+                            resolution,
+                            genres
                         });
+
                         break;
                     }
 
@@ -102,7 +156,7 @@ export async function getNowPlaying(): Promise<SetActivity | null> {
             await promptServerSetup();
         }
         
-        console.error(`[${tags.Error}] Failed to get now playing information.`);
+        console.error(`[${tags.Error}] Failed to get now playing information.`, e);
         return null;
     }
 }

@@ -1,3 +1,4 @@
+import { SetActivity } from "@xhayper/discord-rpc";
 import { DatabaseService } from "../database/DatabaseService.js";
 import { getNowPlaying } from "../jellyfin/functions/GetNowPlaying";
 import Tags from "../utils/Tags.js";
@@ -25,7 +26,38 @@ client.on('ready', () => {
         const jd = await getNowPlaying();
 
         if (jd) {
-            // discord.updatePresence(jd);
+            let presenceData: SetActivity = {
+                startTimestamp: jd.startTimestamp,
+                endTimestamp: jd.endTimestamp,
+                smallImageKey: 'jellyfin_logo',
+                smallImageText: 'Jellyfin',
+            };
+
+            switch (jd.type) {
+                case 'Episode':
+                    presenceData = {
+                        name: jd.seriesName ?? "Jellyfin",
+                        details: jd.fullEpisodeString,
+                        state: jd.fullSessionString,
+                        largeImageKey: jd.showCoverArtUrl ?? 'jellyfin_logo',
+                        largeImageText: jd.seriesName ?? "Jellyfin",
+                    };
+                    break;
+
+                case 'Movie':
+                    presenceData = {
+                        name: jd.seriesName ?? "Jellyfin",
+                        details: jd.fullMovieString,
+                        largeImageKey: jd.showCoverArtUrl ?? 'jellyfin_logo',
+                    };
+                    break;
+
+                default:
+                    break;
+            }
+
+            console.log(presenceData);
+            // discord.updatePresence(presenceData);
         } else {
             // discord.clearPresence();
         }

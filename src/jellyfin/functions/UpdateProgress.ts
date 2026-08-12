@@ -3,8 +3,7 @@ import { ServerCredsNotFoundError } from "../../utils/Errors";
 import { formatDuration } from "../../utils/FormatDuration";
 import tags from "../../utils/Tags";
 import { jellyfin } from "../ClientWrapper";
-import { TICKS_TO_MS } from "../Index";
-import { getCurrentChapter } from "./GetCurrentChapter";
+import { getNowPlaying } from "./GetNowPlaying";
 import { pressAnyKeyToContinue } from "./PressAnyKeyToContinue";
 import { promptServerSetup } from "./PromptServerSetup";
 
@@ -45,86 +44,39 @@ export async function updateProgress(): Promise<void> {
             console.log("");
         }
 
-        for (let i = 0; i < sessions.length; i++) {
-            const session = sessions[i];
-            const np = session.NowPlayingItem;
+        const data = await getNowPlaying();
 
-            if (sessions.length > 1) {
-                console.log(`[${tags.Jellyfin}] Session #${i + 1} [${session.DeviceName} - ${session.ApplicationVersion}] ${i == 0 ? "<-- (Tracking this one)" : ""}`);
-                console.log(`[${tags.Jellyfin}] ------------------------------------------------`);
-            }
+        const startTime = formatDuration(data?.startTimestamp ? data.startTimestamp / 1000 : 0);
+        const endTime = formatDuration(data?.endTimestamp ? data.endTimestamp / 1000 : 0);
 
-            if (np) {
-                const episodeName = np.Name;
-                const seriesName = np.SeriesName;
-                const parentShowId = np.ParentId;
-                const serverId = session.ServerId;
-                const showType = np.Type;
+        const currentPlaybackPosString = `${startTime} / ${endTime}`;
+        const currentChapterString = data?.currentChapter?.Name ? `• on ${data.currentChapter.Name}` : "";
 
-                const positionTicks = session.PlayState?.PositionTicks ?? 0;
-                const runtimeTicks = session.NowPlayingItem?.RunTimeTicks ?? 0;
+        switch (data?.type) {
+            case 'Episode':
+                console.log(`[${tags.Jellyfin}] Series Name     : ${data.seriesName}`);
+                console.log(`[${tags.Jellyfin}] Episode Name    : ${data.fullEpisodeString}`);
+                console.log(`[${tags.Jellyfin}] Episode Details : ${data.fullSessionString}`);
+                console.log(`[${tags.Jellyfin}] Overview        : ${data.item.Overview ?? "No overview available."}`);
+                console.log(`[${tags.Jellyfin}] Position        : ${currentPlaybackPosString} ${currentChapterString}`);
+                console.log(`[${tags.Jellyfin}] Series URL      : ${data.localShowUrl}`);
+                break;
 
-                const positionMs = positionTicks / TICKS_TO_MS;
-                const runtimeMs = runtimeTicks / TICKS_TO_MS;
+            case 'Movie':
+                console.log(`[${tags.Jellyfin}] Movie Name      : ${data.fullMovieString}`);
+                console.log(`[${tags.Jellyfin}] Year            : ${data.item.ProductionYear ?? 'N/A'}`);
+                console.log(`[${tags.Jellyfin}] Genres          : ${data.genres}`);
+                console.log(`[${tags.Jellyfin}] Rating          : ${data.item.OfficialRating ?? 'N/A'} • Community ${data.item.CommunityRating ?? 'N/A'} • Critic ${data.item.CriticRating ?? 'N/A'}`);
+                console.log(`[${tags.Jellyfin}] Quality         : ${data.resolution} ${data.codec}`);
+                console.log(`[${tags.Jellyfin}] Overview        : ${data.item.Overview && data.item.Overview.length > 100 ? data.item.Overview.slice(0, 100) + '...' : "No overview available."}`);
+                console.log(`[${tags.Jellyfin}] Position        : ${currentPlaybackPosString} ${currentChapterString}`);
+                console.log(`[${tags.Jellyfin}] Series URL      : ${data.localShowUrl}`);
+                break;
 
-                const episodeIndex = np.IndexNumber;
-                const seasonIndex = np.ParentIndexNumber;
-
-                const chapters = np.Chapters ?? [];
-                const currentChapter = getCurrentChapter(chapters, positionTicks);
-
-                // console.log(chapters);
-                // console.log(currentChapter);
-                // console.log(`[${tags.Debug}] Position Ticks: ${positionTicks}`);
-
-                const seriesUrl = `${serverCreds?.BaseUrl}/web/#/details?id=${parentShowId}&serverId=${serverId}`;
-
-                console.log(`[${tags.Jellyfin}] Currently Playing`);
-
-                switch (showType) {
-                    case 'Episode': {
-                        console.log(`[${tags.Jellyfin}] Series Name     : ${seriesName}`);
-                        console.log(`[${tags.Jellyfin}] Episode Name    : ${episodeName}`);
-                        console.log(`[${tags.Jellyfin}] Episode Details : Season ${seasonIndex}, Episode ${episodeIndex}`);
-                        console.log(`[${tags.Jellyfin}] Overview        : ${np.Overview ?? "No overview available."}`);
-                        console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)} ${currentChapter?.Name ? `• ${currentChapter.Name}` : ""}`);
-                        console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
-
-                        break;
-                    }
-
-                    case 'Audio':
-                        break;
-
-                    case 'Movie': {
-                        // console.log(np);
-
-                        const videoStream = np.MediaStreams?.find(s => s.Type === 'Video');
-                        const resolution = videoStream ? `${videoStream.Width}x${videoStream.Height}` : 'N/A';
-                        const codec = videoStream?.Codec?.toUpperCase() ?? 'N/A';
-                        const genres = np.Genres?.join(', ') || 'N/A';
-
-                        console.log(`[${tags.Jellyfin}] Movie Name      : ${episodeName}`);
-                        console.log(`[${tags.Jellyfin}] Year            : ${np.ProductionYear ?? 'N/A'}`);
-                        console.log(`[${tags.Jellyfin}] Genres          : ${genres}`);
-                        console.log(`[${tags.Jellyfin}] Rating          : ${np.OfficialRating ?? 'N/A'} • Community ${np.CommunityRating ?? 'N/A'} • Critic ${np.CriticRating ?? 'N/A'}`);
-                        console.log(`[${tags.Jellyfin}] Quality         : ${resolution} ${codec}`);
-                        console.log(`[${tags.Jellyfin}] Overview        : ${np.Overview && np.Overview.length > 100 ? np.Overview.slice(0, 100) + '...' : "No overview available."}`);
-                        console.log(`[${tags.Jellyfin}] Position        : ${formatDuration(positionMs / 1000)} / ${formatDuration(runtimeMs / 1000)} ${currentChapter?.Name ? `• on ${currentChapter.Name}` : ""}`);
-                        console.log(`[${tags.Jellyfin}] Series URL      : ${seriesUrl}`);
-                        break;
-                    }
-                    default:
-                        console.error(`[${tags.Error}] Unhandled show type: ${showType}`);
-                        break;
-                }
-
-            } else {
-                console.log(`[${tags.Jellyfin}] Currently not playing anything at the moment.`);
-            }
-
-            console.log("");
+            default:
+                break;
         }
+        
     } catch (e) {
         if (e instanceof ServerCredsNotFoundError) {
             await promptServerSetup();
