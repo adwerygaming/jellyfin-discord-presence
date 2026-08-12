@@ -1,5 +1,5 @@
 import { DatabaseService } from "../database/DatabaseService.js";
-import { getNowPlaying } from "../jellyfin/Index.js";
+import { getNowPlaying } from "../jellyfin/functions/GetNowPlaying";
 import Tags from "../utils/Tags.js";
 import { client } from "./Client.js";
 import { DiscordRPC } from "./DiscordRPC.js";
@@ -25,9 +25,9 @@ client.on('ready', () => {
         const jd = await getNowPlaying();
 
         if (jd) {
-            discord.updatePresence(jd);
+            // discord.updatePresence(jd);
         } else {
-            discord.clearPresence();
+            // discord.clearPresence();
         }
     }
 
