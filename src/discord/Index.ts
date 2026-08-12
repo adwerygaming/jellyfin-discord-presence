@@ -65,7 +65,8 @@ client.on('ready', () => {
 
             discord.updatePresence(presenceData);
         } else {
-            // discord.clearPresence();
+            discord.clearPresence();
+            
         }
     }
 
