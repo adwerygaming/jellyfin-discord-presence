@@ -1,27 +1,6 @@
-import axios from "axios";
+import { Jellyfin } from '@jellyfin/sdk';
 
-const jellyfinUrl = process.env.JELLYFIN_URL; // Jellyfin server url
-const accessToken = process.env.JELLYFIN_ACCESS_TOKEN; // Jellyfin API Access Token
-
-if (!jellyfinUrl) {
-    console.log("JELLYFIN_URL is missing on .env file. Please fill it out.")
-    process.exit(1)
-}
-
-if (!accessToken) {
-    console.log("JELLYFIN_ACCESS_TOKEN is missing on .env file. Please fill it out.")
-    process.exit(1)
-}
-
-// Create axios instance for Jellyfin API
-const JellyfinAPI = axios.create({
-    baseURL: jellyfinUrl,
-
-    // apperantly this is how jellyfin accepts requests.
-    headers: {
-        'X-Emby-Token': accessToken,
-        'Content-Type': 'application/json'
-    }
+export const jellyfin = new Jellyfin({
+  clientInfo: { name: 'Jellyfin Discord Presence', version: '1.0.0' },
+  deviceInfo: { name: 'NodeJS', id: 'this-is-not-a-placeholder-but-if-u-want-to-change-this-go-ahread' }
 });
-
-export default JellyfinAPI

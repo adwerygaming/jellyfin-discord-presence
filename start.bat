@@ -1,5 +1,5 @@
 @echo off
 
 :start
-npm run dev
+npm run start
 goto start

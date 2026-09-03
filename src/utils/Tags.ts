@@ -1,22 +1,26 @@
 import gradient from 'gradient-string';
 
 const RawTags = {
-  System: {colors: ['#66FF66', '#00CC66']},
-  Jellyfin: {colors: ['#A463BF', '#8E43AD']},
-  Discord: {colors: ['#5865f2', '#3e4bd3ff']},
-  Error: {colors: ['#C0382B', '#E84B3C']},
-  Warn: {colors: ['#f9fd12ff', '#ad8e00ff']},
-  Debug: {colors: ['#3398DB', '#2980B9']},
+  System: { colors: ['#66FF66', '#00CC66'] },
+  Error: { colors: ['#C0382B', '#E84B3C'] },
+  Debug: { colors: ['#3398DB', '#2980B9'] },
+  Discord: { colors: ['#3398DB', '#2980B9'] },
+  Helper: { colors: ['#F39C12', '#E67E22'] },
+  Warning: { colors: ['#F1C40F', '#F39C12'] },
+  Info: { colors: ['#1ABC9C', '#16A085'] },
+  Job: { colors: ['#607D8B', '#455A64'] },
+  Database: { colors: ['#336791', '#003B57'] },
+  Jellyfin: { colors: ['#304485', '#3f78ac'] }
 };
 
-type TagConfig = {colors: string[]};
+type TagConfig = { colors: string[] };
 type RawTagMap = typeof RawTags;
 
-const Tags = Object.fromEntries(
-  (Object.entries(RawTags) as [keyof RawTagMap, TagConfig][]).map(([key, {colors}]) => {
+const tags = Object.fromEntries(
+  (Object.entries(RawTags) as [keyof RawTagMap, TagConfig][]).map(([key, { colors }]) => {
     const fn = gradient(colors);
     return [key, fn(key)];
   })
-) as {[K in keyof RawTagMap]: string};
+) as { [K in keyof RawTagMap]: string };
 
-export default Tags;
+export default tags;

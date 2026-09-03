@@ -1,35 +1,97 @@
+import { SetActivity } from "@xhayper/discord-rpc";
+import { ActivityType } from 'discord-api-types/v10';
+import { DatabaseService } from "../database/DatabaseService.js";
+import { getNowPlaying } from "../jellyfin/functions/GetNowPlaying";
 import Tags from "../utils/Tags.js";
-import DiscordRPC from "./Client.js";
-import { DiscordService } from "./DiscordService.js";
+import { client } from "./Client.js";
+import { DiscordRPC } from "./DiscordRPC.js";
 
-const updateInterval = 1000 * 15 // Interval in seconds. I suggest putting around >15s
-const clientId = process.env.DISCORD_CLIENT_ID
+const db = new DatabaseService();
 
-if (!clientId) {
-    console.log(`[${Tags.System}] DISCORD_CLIENT_ID is missing on .env file. Please fill it out.`)
-    process.exit(1)
-}
+const settings = await db.getSettings();
+const updateInterval = settings.updateInterval;
 
-DiscordRPC.on('ready', async () => {
-    console.log(`[${Tags.Discord}] Connected to Discord as ${DiscordRPC?.user?.username ?? "Unknown Username"} (${DiscordRPC?.user?.id ?? "Unknown User ID"}).`);
+const discord = new DiscordRPC(client);
 
-    setInterval(async () => {
-        await DiscordService.UpdateRPC()
+client.on('ready', () => {
+    const user = client.user;
+
+    if (!user) {
+        console.error(`[${Tags.Discord}] Discord client is not ready. User is undefined.`);
+        return;
+    }
+
+    console.log(`[${Tags.Discord}] Discord RPC connected as ${user.username} (${user.id})`);
+
+    async function updatePresence(): Promise<void> {
+        const jd = await getNowPlaying();
+
+        if (jd) {
+            let presenceData: SetActivity = {
+                startTimestamp: jd.startTimestamp,
+                endTimestamp: jd.endTimestamp,
+                smallImageKey: 'jellyfin_logo',
+                smallImageText: 'Jellyfin',
+            };
+
+            switch (jd.type) {
+                case 'Episode':
+                    presenceData = {
+                        type: ActivityType.Watching,
+                        name: jd.seriesName ?? "Jellyfin",
+                        details: jd.fullEpisodeString,
+                        state: jd.fullSessionString,
+                        largeImageKey: jd.showCoverArtUrl ?? 'jellyfin_logo',
+                        largeImageText: jd.seriesName ?? "Jellyfin",
+                        startTimestamp: jd.startTimestamp,
+                        endTimestamp: jd.endTimestamp,
+                    };
+                    break;
+
+                case 'Movie':
+                    presenceData = {
+                        type: ActivityType.Watching,
+                        name: jd.seriesName ?? "Jellyfin",
+                        details: jd.fullMovieString,
+                        largeImageKey: jd.showCoverArtUrl ?? 'jellyfin_logo',
+                        startTimestamp: jd.startTimestamp,
+                        endTimestamp: jd.endTimestamp,
+                    };
+                    break;
+
+                default:
+                    break;
+            }
+
+            discord.updatePresence(presenceData);
+        } else {
+            discord.clearPresence();
+            
+        }
+    }
+
+    setInterval(() => {
+        (async (): Promise<void> => {
+            await updatePresence();
+        })();
     }, updateInterval);
 
-    await DiscordService.UpdateRPC()
+    (async (): Promise<void> => {
+        await updatePresence();
+    })();
 });
 
-DiscordRPC.on("error", (e) => {
+client.on("error", (e) => {
     console.log(`[${Tags.Discord}] Discord PRC Failure.`);
-    console.error(e)
-})
+    console.error(e);
+});
 
+console.log("");
 console.log(`[${Tags.Discord}] Connecting to Discord RPC...`);
 
 try {
-    DiscordRPC.login({ clientId })
+    client.login();
 } catch (e) {
     console.log(`[${Tags.Discord}] Failed to login Discord PRC.`);
-    console.error(e)
+    console.error(e);
 }
